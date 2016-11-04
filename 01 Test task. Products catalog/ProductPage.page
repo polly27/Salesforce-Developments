@@ -1,0 +1,260 @@
+<apex:page docType="html-5.0" standardController="Product__c"
+extensions="ProductController" tabStyle="ProductPage__tab"
+sidebar="false">
+<html>
+<head>
+	<meta charset="utf-8" />
+	<title>Product Catalog</title>
+	<apex:includeScript value="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js" />
+	<link rel="stylesheet"
+	href="https://code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css" />
+	<apex:includeScript value="https://code.jquery.com/ui/1.11.4/jquery-ui.js" />
+	<link
+	href="{!URLFOR($Resource.bootstrap, 'bootstrap-3.3.7-dist/css/bootstrap.css')}"
+	rel="stylesheet" />
+	<link
+	href="{!URLFOR($Resource.bootstrap, 'bootstrap-3.3.7-dist/css/bootstrap-theme.min.css')}"
+	rel="stylesheet" />
+
+	<style type="text/css">
+		h1, h2, h3, h4 {
+			display: block;
+			color: rgb(51,51,51);
+			margin: 30px auto;
+			text-align: center;
+		}
+
+		.header {
+			font-size: 16px;
+			padding: 12px;
+			text-align: center;
+		}
+
+		.no-padding {
+			padding: 0;
+		}
+
+		.btn {
+			padding: 5px 10px !important;
+			font: 16px sans-serif !important;
+			background: rgb(0,154,205) !important;
+			border: 1px solid rgb(0,0,0) !important;
+			color: rgb(255,255,255) !important;
+			text-shadow: none;
+		}
+
+		.btn:hover {
+			background: rgb(1,178,238) !important;
+		}
+		
+		.delete-btn {
+			font-size: 14px !important;
+			padding: 4px 6px !important;
+			background: rgb(255,99,71) !important;
+		}
+		
+		.delete-btn:hover {
+			background: rgb(255,127,80) !important;
+		}
+		
+		.order-by {
+			color: rgb(205,38,38) !important;     
+		}
+		
+		.order-by:hover {
+			color: rgb(238,44,44) !important;    
+		}
+	</style>
+</head>
+<body>
+	<div class="container">
+		<div class="row">
+			<a id="top"/>
+			<h1>Product Catalog</h1>
+			<apex:pageBlock mode="maindetail" id="product_catalog">
+			<apex:form styleClass="form-horizontal">
+			<div class="col-xs-10 col-md-10 col-md-offset-1" style="max-height: 500px; overflow-y: auto">
+				<apex:outputpanel rendered="{!products.size == 0}">
+				<br/>
+				<h1>Records not found</h1>
+				<h4>
+					<apex:commandLink action="{!showAll}" style="color: rgb(205,92,92)" reRender="product_catalog,search_by" value="Show All"/>
+				</h4>
+			</apex:outputpanel>
+			<apex:outputpanel rendered="{!products.size != 0}">
+			<apex:pageBlockTable value="{!products}" var="product"
+			styleClass="table table-condensed table-striped table-hover text-center"
+			headerClass="header">
+			<apex:column value="{!product.name}">
+			<apex:facet name="header">
+			<apex:commandLink action="{!orderByName}" rerender="product_catalog"
+			styleClass="{!IF(orderBy == 'name','order-by','')}">
+			Name <i class="glyphicon glyphicon-sort"></i>
+		</apex:commandLink>
+	</apex:facet>
+</apex:column>
+<apex:column >
+<apex:facet name="header">
+<apex:commandLink action="{!orderByPrice}" rerender="product_catalog"
+styleClass="{!IF(orderBy == 'price','order-by','')}">
+Price <i class="glyphicon glyphicon-sort"></i>
+</apex:commandLink>
+</apex:facet>
+<apex:outputText value="{0,Number,Currency}">
+<apex:param value="{!product.price}" />
+</apex:outputText>
+</apex:column>
+<apex:column headerValue="Amount">
+<apex:outputText value="{!FLOOR(product.amount)}" />
+</apex:column>
+<apex:column headerValue="Type">
+<apex:outputText value="{!product.productType}" />
+</apex:column>
+<apex:column >
+<apex:facet name="header">
+<apex:commandLink action="{!orderByDateAdded}" rerender="product_catalog"
+styleClass="{!IF(orderBy == 'dateAdded','order-by','')}">
+Date Added <i class="glyphicon glyphicon-sort"></i>
+</apex:commandLink>
+</apex:facet>
+<apex:outputText value="{0,date,dd.MM.yyyy 'at' HH:mm}">
+<apex:param value="{!product.dateAdded}" />
+</apex:outputText>
+</apex:column>
+<apex:column >
+<apex:facet name="header">
+<apex:commandLink action="{!orderByReleaseDate}" rerender="product_catalog"
+styleClass="{!IF(orderBy == 'releaseDate','order-by','')}">
+Release Date <i class="glyphicon glyphicon-sort"></i>
+</apex:commandLink>
+</apex:facet>
+<apex:outputText value="{0,date,dd.MM.yyyy}">
+<apex:param value="{!product.releaseDate}" />
+</apex:outputText>
+</apex:column>
+<apex:column headerValue="In Stock">
+<apex:inputCheckbox value="{!product.inStock}" disabled="true" />
+</apex:column>
+<apex:column width="15px">
+<apex:inputCheckbox value="{!product.toDelete}" />
+</apex:column>
+</apex:pageBlockTable>                               
+</apex:outputPanel>
+</div>
+<div class="col-xs-10 col-md-10 col-md-offset-1">
+	<div class="form-group" style="padding-top:15px">
+		<apex:commandButton action="{!deleteProducts}" id="deleteBtn"
+		styleClass="btn btn-default pull-right delete-btn" value="Delete selected"
+		reRender="product_catalog" oncomplete="document.getElementById('top').scrollIntoView()"/>
+	</div>
+</div>
+</apex:form>
+</apex:pageBlock>
+</div>
+<br />
+<hr />
+<div class="row">
+	<div class="col-xs-12 col-md-5 col-md-offset-1">
+		<apex:form styleClass="form-horizontal" id="new_product">
+		<div class="container-fluid">
+			<h2>New Product</h2>
+			<div class="form-group">
+				<label class="control-label col-xs-4" for="name">Product
+					Name:</label>
+					<div class="col-xs-8">
+						<apex:inputField id="name" value="{!newProduct.Name}"
+						required="true" styleClass="form-control" />
+					</div>
+				</div>
+				<div class="form-group">
+					<label class="control-label col-xs-4" for="price">Price:</label>
+					<div class="col-xs-8">
+						<apex:inputField id="price" value="{!newProduct.Price__c}"
+						required="true" styleClass="form-control" />
+					</div>
+				</div>
+				<div class="form-group">
+					<label class="control-label col-xs-4" for="amount">Amount:</label>
+					<div class="col-xs-8">
+						<apex:inputField id="amount" value="{!newProduct.Amount__c}"
+						required="true" styleClass="form-control" />
+					</div>
+				</div>
+				<div class="form-group">
+					<label class="control-label col-xs-4" for="type">Type:</label>
+					<div class="col-xs-8">
+						<apex:inputField id="type" value="{!newProduct.Type__c}"
+						required="true" styleClass="form-control" />
+					</div>
+				</div>
+				<div class="form-group">
+					<label class="control-label col-xs-4" for="releaseDate">Release
+						Date:</label>
+						<div class="col-xs-8">
+							<apex:inputField id="releaseDate"
+							value="{!newProduct.Release_date__c}" required="true"
+							styleClass="form-control" style="width: 100%" />
+						</div>
+					</div>
+					<div class="form-group">
+						<div class="col-xs-offset-4 col-xs-4">
+							<apex:commandButton action="{!addNewProduct}" value="Save"
+							styleClass="btn btn-default" oncomplete="document.getElementById('top').scrollIntoView()"
+							reRender="product_catalog,new_product" style="width: 100%" />
+						</div>
+					</div>
+				</div>
+			</apex:form>
+		</div>
+		<div class="col-xs-12 col-md-5">
+			<div class="container-fluid">
+				<apex:form styleClass="form-horizontal" id="search_by">
+				<h2>Search by</h2>
+				<div class="form-group">
+					<label class="control-label col-xs-4 col-xs-offset-1" for="searchByName">Product Name:</label>
+					<div class="col-xs-7">
+						<apex:inputText id="searchByName" value="{!searchByName}" styleClass="form-control"/>
+					</div>
+				</div>
+				<div class="form-group">
+					<label class="control-label col-xs-4 col-xs-offset-1" for="searchByDateAdded">Date Added:</label>
+					<div class="col-xs-7">
+						<apex:input type="date" id="searchByDateAdded" value="{!searchByDate}" styleClass="form-control"/>
+					</div>
+				</div>
+				<div class="form-group">
+					<div class="col-xs-4 col-xs-offset-4">
+						<apex:commandButton action="{!filter}" reRender="product_catalog" value="Find" 
+						oncomplete="document.getElementById('top').scrollIntoView()" style="width:100%"/>
+					</div>
+				</div>
+				<apex:commandLink action="{!showAll}" reRender="product_catalog,search_by" value="Show All" 
+				oncomplete="document.getElementById('top').scrollIntoView()" style="text-align: end" styleClass="col-xs-4 col-xs-offset-4"/>
+			</apex:form>
+		</div>
+	</div>
+</div>
+</div>
+<apex:includeScript value="{!URLFOR($Resource.bootstrap, 'bootstrap-3.3.7-dist/js/bootstrap.min.js')}"></apex:includeScript>
+<script>function setFocusOnLoad() {}</script>
+<script type="text/javascript">
+	$(document).ready(function(){
+		$("input[type='date']").attr('max', function(){
+			var today = new Date();
+			var dd = today.getDate();
+			var mm = today.getMonth() + 1;
+			var yyyy = today.getFullYear();
+			if(dd < 10){
+				dd = '0' + dd;
+			} 
+			if(mm < 10){
+				mm = '0' + mm;
+			}
+			today = yyyy + '-' + mm + '-' + dd;
+			return today;
+		});
+	});    
+</script>                                            
+</body>
+</html>
+</apex:page>
