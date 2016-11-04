@@ -1,0 +1,191 @@
+<apex:page docType="html-5.0" controller="SingleProductController" extensions="OrderingController" sidebar="false">
+    <html>
+        <head>
+            <meta charset="utf-8" />
+            <title>Ordering</title>
+            <apex:includeScript value="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js" />
+            <link rel="stylesheet" href="https://code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css" />
+            <apex:includeScript value="https://code.jquery.com/ui/1.11.4/jquery-ui.js" />
+            <apex:includeScript value="https://raw.githack.com/janl/mustache.js/master/mustache.min.js" />
+            <link
+                href="{!URLFOR($Resource.bootstrap, 'bootstrap-3.3.7-dist/css/bootstrap.css')}"
+                rel="stylesheet" />
+            <link
+                href="{!URLFOR($Resource.bootstrap, 'bootstrap-3.3.7-dist/css/bootstrap-theme.min.css')}"
+                rel="stylesheet" />
+            <style type="text/css">
+                h1 {
+                    display: block;
+                    text-align: center !important;	
+                }
+                h3 {
+                	display: block;
+                	margin-bottom: 20px;
+                }
+                #product td {
+                	vertical-align: middle;
+                }
+                .non-display {
+                	display: none;
+                }
+            </style>
+        </head>
+        <body>
+  
+            <script id="product_template" type="text/template">
+               	<div class="col-xs-6 col-sm-4">
+                  	<a href="/servlet/servlet.FileDownload?file={{image}}" target="_blank">
+                    	<img src="/servlet/servlet.FileDownload?file={{image}}" class="img-responsive img-thumbnail" width="500" height="500"/>
+                	</a>       
+                </div>
+                <div class="col-xs-6 col-sm-8">
+                    <div class="row">
+                		<div class="col-xs-10" style="word-wrap: break-word;">
+                            <h2> <a href="/apex/SingleProduct?id={{id}}" target="_blank">{{title}}</a> </h2>
+                        </div>
+                        <div class="col-xs-10" style="word-wrap: break-word; margin-top: 10px">
+                            <h3> {{description}} </h3>
+                        </div>
+                        <div class="col-xs-10" style="margin-top: 12px">
+                            <h3> Cost: 
+                                {{#discountCost}}
+                                    {{discountCost}} (<strike>{{cost}}</strike>)
+                                {{/discountCost}}
+                                {{^discountCost}}
+                                    {{cost}} 
+                                {{/discountCost}}
+                            </h3>
+                        </div>
+                    </div>                    
+                </div>
+                <div id='discountCost' style="display: none">{{discountCost}}</div>
+                <div id='discountResult' style="display: none">{{discountResult}}</div>
+            </script>
+            
+            <div class="container" style="margin-top: 10px; margin-bottom: 40px">
+                <h1 style="margin-bottom: 50px">
+                    Ordering the Product
+                </h1>
+                
+                <h3 id="error-msg" style="color: rgb(203,35,35)"></h3>
+                
+                <form class="form-horizontal col-sm-5" id="order-form">
+                  <div class="form-group">
+                  		<label for="name" class="col-sm-4 control-label">Name*</label>
+                    	<div class="col-sm-8">
+                      		<input type="text" class="form-control" id="name" placeholder="Name" required="true"/>
+                        </div>
+                  </div>
+                  <div class="form-group">
+                    	<label for="email" class="col-sm-4 control-label">E-mail*</label>
+                      	<div class="col-sm-8">
+                            <input type="email" class="form-control" id="email" placeholder="E-mail" required="true"/>
+                      	</div>
+                  </div>
+                  <div class="form-group">
+                    	<label for="address" class="col-sm-4 control-label">Address*</label>
+                      	<div class="col-sm-8">
+                            <input type="text" class="form-control" id="address" placeholder="Address" required="true"/>
+                      	</div>
+                  </div>
+                  <div class="form-group">
+                  	  <label for="phone" class="col-sm-4 control-label">Phone*</label>
+                      <div class="col-sm-8">
+                          <input type='tel' pattern='[\+]\d{12}' class="form-control" id="phone" placeholder="e.g. +375290011012" required="true"/>
+                      </div>
+                  </div>
+                  <div id='discount-zone' class="form-group non-display">
+                  	  <label for="discount" class="col-sm-4 control-label">Discount Code</label>
+                      <div class="col-sm-8">
+                          <input type='text' pattern='[A-Z0-9]{4}(-[A-Z0-9]{4}){3}' class="form-control" id="discount" 
+                                 placeholder="e.g. 25GH-8542-7854-9547"/>
+                      </div>
+                      <label for="discount" id="discount-error-msg" class="non-display col-sm-8 col-sm-offset-4 control-label" 
+                             style="color: rgb(203,35,35); text-align: left">Discount with this code doesn't exist.</label>
+                  </div>
+			  	  <script id="product_id_template" type="text/template">
+            		  <input type="hidden" value="{{id}}"/>
+                  </script>
+                  <div id="product-id"></div>
+                  <div class="form-group">
+                      <div class="col-xs-offset-4 col-xs-4">
+                      	<button type="submit" class="btn btn-default" style="min-width:100%">Place the Order</button>                          
+                      </div>
+                  </div>
+                </form>
+                
+                <div id="product" class="col-sm-7"></div> 
+            </div>
+            
+            <script type="text/javascript">
+            j$ = jQuery.noConflict();
+            
+            j$(document).ready(function() {
+                loadProduct();
+                j$("#order-form").on("submit",function(e){
+                    e.preventDefault();
+                    placeOrder();
+                });
+            });
+            
+            function loadProduct() {
+                var product;
+                Visualforce.remoting.Manager.invokeAction(
+                    '{!$RemoteAction.SingleProductController.getJsonProduct}',
+                    '{!$CurrentPage.Parameters.id}',
+                    window.UserContext.userId,
+                    function(result, event) {
+                        if(event.status) {
+                            product = JSON.parse(result.replace(/\&quot\;/g,'\"'));
+                            if(product.discountResult == null) {
+                                j$('#discount-zone').removeClass('non-display');
+                            }
+                            currencyFormat(product);
+                            var template = j$('#product_template').html();
+                            var output = Mustache.render(template, product);
+                            j$('#product').html(output);
+                            template = j$('#product_id_template').html();
+                            output = Mustache.render(template, {id : product.id});
+                            j$('#product-id').html(output);
+                        } else {
+                            j$("#error-msg").html('Error: ' + event.message);    
+                        } 
+                    }
+                );
+                return false;
+            }
+            
+            function currencyFormat(product) {
+                product.cost = '$' + product.cost.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            }
+            
+            function placeOrder() {
+                Visualforce.remoting.Manager.invokeAction(
+                    '{!$RemoteAction.OrderingController.placeOrder}',
+                    j$("#name").val(),
+                    j$("#email").val(),
+                    j$("#address").val(),
+                    j$("#phone").val(),
+                    j$("#discount").val(),
+                    j$("#product-id input").val(),
+                    j$("#discountCost").html(),
+                    j$("#discountResult").html(),
+                    function(result, event) {
+                        if(event.status) {
+                            if(result == 'discount') {
+                            	j$("#discount-error-msg").removeClass("non-display");        
+                            } else {
+                              window.location.href = "/apex/Success?id=" + result;
+                            }
+                        } else {
+                            j$("#discount-error-msg").addClass("non-display");        
+                            j$("#error-msg").html('Error: ' + event.message);        
+                        } 
+                    }
+                );
+            }
+            </script>
+            <apex:includeScript value="{!URLFOR($Resource.bootstrap, 'bootstrap-3.3.7-dist/js/bootstrap.min.js')}"/>
+        </body>
+    </html>
+</apex:page>

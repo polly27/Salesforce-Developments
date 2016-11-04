@@ -1,0 +1,224 @@
+<apex:page docType="html-5.0" controller="CatalogController"
+    tabStyle="Catalog__tab" sidebar="false">
+    <html>
+        <head>
+            <meta charset="utf-8" />
+            <title>Catalog</title>
+            <apex:includeScript value="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js" />
+            <link rel="stylesheet" href="https://code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css" />
+            <apex:includeScript value="https://code.jquery.com/ui/1.11.4/jquery-ui.js" />
+            <apex:includeScript value="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js"/>
+            <apex:includeScript value="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular.min.js"/>
+            <link
+                href="{!URLFOR($Resource.bootstrap, 'bootstrap-3.3.7-dist/css/bootstrap.css')}"
+                rel="stylesheet" />
+            <link
+                href="{!URLFOR($Resource.bootstrap, 'bootstrap-3.3.7-dist/css/bootstrap-theme.min.css')}"
+                rel="stylesheet" />
+            <style type="text/css">
+                h1, h3 {
+                    display: block;
+                    text-align: center;
+                }
+                #catalog th {
+                    font-weight: bold;
+                    text-align: center;
+                }
+                #catalog td {
+                    break-word: word-wrap;
+                    vertical-align: middle;
+                    padding: 5px;
+                }
+                .chosen {
+                    color: rgb(178,0,0);
+                }
+                .pointer {
+                    cursor: pointer;
+                }
+                ul li {
+                	margin: 0 !important;
+                }
+                .pagination li.active a, .pagination li.active a:hover {
+                	background-color: rgb(238, 238, 238);
+                	border-color: rgb(204, 204, 204);
+                	color: rgb(85, 85, 85);
+                }
+            </style>
+        </head>
+        <body ng-app="sortApp" ng-controller="catalogController">
+            
+            <div class="container">
+                <br/>
+                <h1>Order whatever you want!</h1>
+                <br/>
+
+                <div class="row">
+                    <div class="form-group col-sm-4">
+                        <div class="input-group">
+                            <input type="text" ng-model="searchProduct" class="form-control" placeholder="Search for special product"/>
+                            <div class="input-group-addon"><i class="glyphicon glyphicon-search"></i></div>
+                        </div>
+                    </div>
+                </div>
+                    
+                <div class="row">
+                    
+                    <div aria-label="Choosing items per page" class="col-sm-3">
+                        <select class="form-control"
+                                ng-model="numPerPage"
+                                ng-options="x as (x + ' items per page') for x in [3,6,12,24,58]"/>
+                    </div>
+                    
+                    <div aria-label="Page navigation" class="col-sm-9">
+                        <ul class="pagination pull-right" style="margin-top: 0">
+                            <li class="{{currentPage == 0 ? 'disabled' : ''}}">
+                              <a class="pointer" aria-label="Previous" ng-click="setPage(currentPage - 1)">
+                                <span aria-hidden="true">&laquo;</span>
+                              </a>
+                            </li>
+                            <li ng-repeat="i in pageRange" class="{{currentPage == i ? 'active' : ''}}">
+                                <a ng-click="setPage(i)" class="pointer">{{i + 1}}</a>
+                            </li>
+                            <li class="{{currentPage == pagesNumber - 1 ? 'disabled' : ''}}">
+                              <a class="pointer" aria-label="Next" ng-click="setPage(currentPage + 1)">
+                                <span aria-hidden="true">&raquo;</span>
+                              </a>
+                            </li>
+                        </ul>
+                    </div>    
+                    
+                </div>
+
+                <table class="table table-hover">
+                    <tr>
+                        <th> </th>
+                        <th ng-click="sortBy = 'name'; sortReverse = !sortReverse"
+                                class="pointer {{sortBy=='name' ? 'chosen' : ''}}">
+                            Name
+                            <span class="glyphicon glyphicon-sort"></span>
+                        </th>
+                        <th> Description </th>
+                        <th ng-click="sortBy = 'cost'; sortReverse = !sortReverse"
+                                class="pointer {{sortBy=='cost' ? 'chosen' : ''}}">
+                            Cost
+                            <span class="glyphicon glyphicon-sort"></span>
+                        </th>
+                        <th ng-click="sortBy = 'amount'; sortReverse = !sortReverse"
+                                class="pointer {{sortBy=='amount' ? 'chosen' : ''}}"> 
+                            Amount
+                            <span class="glyphicon glyphicon-sort"></span>
+                        </th>
+                        <th> <input type="checkbox" ng-model="allSelected" ng-click="toggleAll()"/> </th>
+                    </tr>
+                    <tr ng-repeat="product in filtered | orderBy:sortBy:sortReverse |
+                                   startFrom:currentPage * numPerPage | limitTo:numPerPage">
+                        <td style="width: 200px"> 
+                            <a href="/servlet/servlet.FileDownload?file={{product.image}}" target="_blank">
+                                <img src="/servlet/servlet.FileDownload?file={{product.image}}" class="img-responsive" width="190" height="190"/>
+                            </a>                            
+                        </td>
+                        <td style="min-width: 150px"> {{product.name}} </td>
+                        <td> {{product.description}} </td>
+                        <td style="text-align: center;"> {{product.cost | currency}} </td>
+                        <td style="text-align: center;"> {{product.amount}} </td>
+                        <td> <input type="checkbox" ng-model="product.selected" ng-click="checkAllItemsSelected()"/> </td>
+                    </tr>
+                </table>
+                
+                <div class="col-sm-3 col-sm-offset-9">
+                    <button ng-show="anyItemToggled()" ng-click="order()" class="button btn-success btn-sm pull-right" style="width: 100%">
+                        Make an Order
+                    </button>
+                </div>
+                
+                <br/><br/>
+                
+            </div>
+
+            <script type="text/javascript">
+            j$ = jQuery.noConflict();
+                   
+            angular.module('sortApp', [])
+            .controller('catalogController', function($scope, $filter) {
+                $scope.sortBy = 'name';
+                $scope.sortReverse = false;
+                $scope.searchProduct = '';
+                $scope.currentPage = 0;
+                $scope.numPerPage = 3;
+                
+                Visualforce.remoting.Manager.invokeAction(
+                    '{!$RemoteAction.CatalogController.getCatalog}',
+                    function(result, event) {
+                        if(event.status) {
+                            result = JSON.parse(result.replace(/\&quot\;/g,'\"').replace(/\&#39\;/g,'\''));
+                            $scope.$apply(function(){
+                                $scope.catalog = result;
+                                $scope.reloadPagination();
+                                $scope.allSelected = false;
+                            });
+                        } else {
+                            alert(event.message);    
+                        } 
+                    }
+                );
+				
+                $scope.reloadPagination = function() {
+                    	$scope.filtered = $filter('filter')(($scope.catalog || []), $scope.searchProduct);
+                    	$scope.pagesNumber = getPagesNumber($scope.filtered.length, $scope.numPerPage);
+                        $scope.pageRange = _.range(0, $scope.pagesNumber);
+                	};
+                
+                $scope.setPage = function(i) {
+                		if($scope.currentPage != i && i != -1 && i != $scope.pagesNumber) {
+                            j$("#page" + $scope.currentPage).removeClass('active');
+                            $scope.currentPage = i;
+                            j$("#page" + $scope.currentPage).addClass('active');
+                        }
+                	};	
+                                
+                $scope.$watchGroup(['searchProduct', 'numPerPage'], function() {
+                    	$scope.reloadPagination();
+                    	$scope.setPage(0);	
+                    	$scope.checkAllItemsSelected();
+                	});
+                
+                $scope.toggleAll = function() {
+                        _.each($scope.filtered, function(product){ product.selected = $scope.allSelected; });
+                    };
+                                
+                $scope.checkAllItemsSelected = function() {
+                        $scope.allSelected = _.every($scope.filtered, function(product) { return product.selected;});
+                    };                                
+
+                $scope.anyItemToggled = function() {
+            	    	return _.some($scope.catalog, function(product) { return product.selected == true; });
+            		};
+                
+                $scope.order = function() {
+                        var orderIdList = '';
+                    	_.each($scope.catalog, function(product){ 
+                            	if(product.selected) {
+                                	orderIdList += product.id + ',';
+                                }
+                            });
+                    	orderIdList = orderIdList.substr(0, orderIdList.length - 1);
+                    	window.open('/apex/Ordering?order=' + orderIdList, '_self');
+                	}; 
+
+            })
+            .filter('startFrom', function() {
+            	return function(input, start) {
+                    return (input || []).slice(start);
+                }
+            });
+                        
+            function getPagesNumber(n, perPage) {
+                return (n - n % perPage) / perPage + (n % perPage == 0 ? 0 : 1);
+            }
+                        
+            </script>
+            
+            <apex:includeScript value="{!URLFOR($Resource.bootstrap, 'bootstrap-3.3.7-dist/js/bootstrap.min.js')}"/>
+        </body>
+    </html>
+</apex:page>

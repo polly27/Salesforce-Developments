@@ -1,0 +1,27 @@
+<apex:page docType="html-5.0" sidebar="false">
+<html>
+        <head>
+            <meta charset="utf-8" />
+            <title>Order is accepted</title>
+            <apex:includeScript value="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js" />
+            <link rel="stylesheet" href="https://code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css" />
+            <apex:includeScript value="https://code.jquery.com/ui/1.11.4/jquery-ui.js" />
+            <link
+                href="{!URLFOR($Resource.bootstrap, 'bootstrap-3.3.7-dist/css/bootstrap.css')}"
+                rel="stylesheet" />
+            <link
+                href="{!URLFOR($Resource.bootstrap, 'bootstrap-3.3.7-dist/css/bootstrap-theme.min.css')}"
+                rel="stylesheet" />
+            <style type="text/css">
+                h1, h2 {
+                    display: block;
+                    text-align: center;
+                }
+            </style>
+        </head>
+  <h1>Congratulations</h1>
+  <h2>The order is accepted.</h2>
+  <h2><a href="/apex/Catalog">Go to the catalog</a></h2>
+  <apex:includeScript value="{!URLFOR($Resource.bootstrap, 'bootstrap-3.3.7-dist/js/bootstrap.min.js')}"/>
+  </html>
+</apex:page>

@@ -1,0 +1,74 @@
+<apex:page docType="html-5.0" controller="SuccessController" sidebar="false">
+    <html>
+        <head>
+            <meta charset="utf-8" />
+            <title>Ordering</title>
+            <apex:includeScript value="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js" />
+            <link rel="stylesheet" href="https://code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css" />
+            <apex:includeScript value="https://code.jquery.com/ui/1.11.4/jquery-ui.js" />
+            <link
+                href="{!URLFOR($Resource.bootstrap, 'bootstrap-3.3.7-dist/css/bootstrap.css')}"
+                rel="stylesheet" />
+            <link
+                href="{!URLFOR($Resource.bootstrap, 'bootstrap-3.3.7-dist/css/bootstrap-theme.min.css')}"
+                rel="stylesheet" />
+            <style type="text/css">
+                h1, h2, h3 {
+                    display: block;
+                    text-align: center !important;	
+                }
+            </style>
+        </head>
+        <body>
+            <br/><br/><br/>
+            <h1>Congratulations</h1>
+            <script id="product_template" type="text/template">
+            <h2>
+                Your have ordered <b>{{Title__c}}</b> for 
+                {{#Discount_Cost__c}}
+                    {{Discount_Cost__c}} ( -{{Discount_Result__c}} )
+                {{/Discount_Cost__c}}
+                {{^Discount_Cost__c}}
+                    {{Cost__c}} 
+                {{/Discount_Cost__c}}
+            </h2>
+            </script>
+            <div id="product"></div>
+            <h3><a href="/apex/ProductCatalog">Go to the catalog</a></h3>
+            <br/><br/><br/>
+            
+            <script type="text/javascript">
+            j$ = jQuery.noConflict();
+            
+            j$(document).ready(function() {
+                loadProductInfo();
+            });
+            
+            function loadProductInfo() {
+                Visualforce.remoting.Manager.invokeAction(
+                    '{!$RemoteAction.SuccessController.getSuccessProduct}',
+                    '{!$CurrentPage.Parameters.id}',
+                    function(result, event) {
+                        if(event.status) {
+                            result.Cost__c = currencyFormat(result.Cost__c);
+                            if (result.Discount_Cost__c != null) {
+                                result.Discount_Cost__c = currencyFormat(result.Discount_Cost__c);
+                            }
+                            var template = j$('#product_template').html();
+                            var output = Mustache.render(template, result);
+                            j$('#product').html(output);
+                        } else {
+                            alert(event.message);    
+                        } 
+                    }
+                );
+            }
+            
+            function currencyFormat(val) {
+                return '$' + val.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            }
+            </script>
+        </body>
+    </html>
+</apex:page>
+             

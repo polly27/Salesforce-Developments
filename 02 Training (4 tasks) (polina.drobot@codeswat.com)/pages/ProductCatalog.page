@@ -1,0 +1,163 @@
+<apex:page docType="html-5.0" controller="ProductListController"
+    tabStyle="ProductCatalog__tab" sidebar="false">
+    <html>
+        <head>
+            <meta charset="utf-8" />
+            <title>Product Catalog</title>
+            <apex:includeScript value="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js" />
+            <link rel="stylesheet" href="https://code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css" />
+            <apex:includeScript value="https://code.jquery.com/ui/1.11.4/jquery-ui.js" />
+            <apex:includeScript value="https://raw.githack.com/janl/mustache.js/master/mustache.min.js" />
+            <apex:includeScript value="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js"/>
+            <link
+                href="{!URLFOR($Resource.bootstrap, 'bootstrap-3.3.7-dist/css/bootstrap.css')}"
+                rel="stylesheet" />
+            <link
+                href="{!URLFOR($Resource.bootstrap, 'bootstrap-3.3.7-dist/css/bootstrap-theme.min.css')}"
+                rel="stylesheet" />
+            <style type="text/css">
+                h3 {
+                    display: block;
+                    text-align: center;
+                }
+                #catalog th {
+                	background-color: rgb(177,213,114);
+                	text-align: center;
+                    border-color: #004500;
+                }
+                #catalog td {
+                	break-word: word-wrap;
+                	vertical-align: middle;
+                	padding: 5px;
+                    border-color: #004500;
+                }
+            </style>
+        </head>
+        <body>
+            <script id="catalog_template" type="text/template">
+                {{#show}}
+                <table class="table table-condensed table-bordered table-hover" >
+                    <tr>
+                        <th> </th>
+                        <th> Title </th>
+                        <th> Description </th>
+                        <th> Cost </th>
+                        <th> Buy </th>
+                    </tr>
+                	{{#products}}
+                    <tr>
+                        <td style="width: 90px"> 
+                            <a href="/servlet/servlet.FileDownload?file={{image}}" target="_blank">
+                                <img src="/servlet/servlet.FileDownload?file={{image}}" class="img-responsive" width="80" height="80"/>
+                            </a>
+						</td>
+                        <td> {{title}} </td>
+                        <td> {{description}} <a href="/apex/SingleProduct?id={{id}}" target="_blank">More Details</a></td>
+                        <td>
+                            {{#discountCost}}
+                                {{discountCost}}
+                                <br/>
+                                <strike>{{cost}}</strike>
+                            {{/discountCost}}
+                            {{^discountCost}}
+                                {{cost}} 
+                            {{/discountCost}}
+                        </td>
+                        <td> <a href="/apex/Ordering?id={{id}}" class="btn btn-default" target="_blank">Buy</button> </td>
+                    </tr>
+                    {{/products}}
+                </table>
+                {{/show}}
+                {{^show}}
+                    <br/><br/><h3>There are no products with such parameters. Change request</h3><br/><br/>
+                {{/show}}
+            </script>
+            
+            <div class="container">
+                <br/><br/>
+                <form class="form-horizontal col-sm-7 col-sm-offset-5 " id="order-form">
+                    <div class="form-group">
+                        <label for="name" class="col-sm-3 control-label">Search for name: </label>
+                        <div class="col-sm-7">
+                            <input type="text" class="form-control" id="name" placeholder="Name"/>
+                        </div>
+                        <button type="submit" class="btn btn-default col-sm-1">Go</button>
+                    </div>    
+                </form>
+            	<div id="catalog"></div>     
+            </div>
+            
+            <script type="text/javascript">
+            j$ = jQuery.noConflict();
+            
+            j$(document).ready(function() {
+                renewProducts();
+                j$("#order-form").on("submit",function(e){
+                    e.preventDefault();
+                    searchByName();
+                });
+            });
+                        
+            function renewProducts() {
+                Visualforce.remoting.Manager.invokeAction(
+                    '{!$RemoteAction.ProductListController.getProducts}',
+                    window.UserContext.userId,
+                    function(result, event) {
+                        if(event.status) {
+                            renderProducts(result)
+                        } else {
+                            alert(event.message);    
+                        } 
+                    }
+                );
+            }
+            
+            function searchByName() {
+                Visualforce.remoting.Manager.invokeAction(
+                    '{!$RemoteAction.ProductListController.searchByName}',
+                    window.UserContext.userId,
+                    j$("#name").val(),
+                    function(result, event) {
+                        if(event.status) {
+                            renderProducts(result)
+                        } else {
+                            alert(event.message);     
+                        } 
+                    }
+                );
+            }
+
+            function renderProducts(result) {
+                var data = {
+                    products : [],
+                    show : true
+                };
+                data.products = JSON.parse(result.replace(/\&quot\;/g,'\"'));
+                if(_.isEmpty(data.products)) {
+                    data.show = false;
+                } 
+                _.each(data.products, cutProductDescription);
+                _.each(data.products, setCurrencyFormat);
+                var template = j$('#catalog_template').html();
+                var output = Mustache.render(template, data);
+                j$('#catalog').html(output);
+            }
+
+            function cutProductDescription(product) {
+                if(product.description.length > 100) {
+                	product.description = product.description.substring(0,100) + '...';    
+                }
+            }
+
+            function setCurrencyFormat(product) {
+                product.cost = '$' + product.cost.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                if (product.discountCost != null) {
+                    product.discountCost = '$' + product.discountCost.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                }
+            }
+            </script>
+            
+            <apex:includeScript value="{!URLFOR($Resource.bootstrap, 'bootstrap-3.3.7-dist/js/bootstrap.min.js')}"/>
+        </body>
+    </html>
+</apex:page>

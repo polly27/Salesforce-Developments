@@ -1,0 +1,92 @@
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>Distributor</title>
+
+        <!-- JQUERY -->
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+        <link rel="stylesheet" href="https://code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
+        <script src="https://code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
+        
+        <!-- BOOTSTRAP -->
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+
+        <!-- ANGULAR -->
+        <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular.min.js"></script>
+
+        <!-- UNDERSCORE -->
+        <script type="text/javascript" src="http://documentcloud.github.com/underscore/underscore-min.js"></script>
+
+    </head>
+    <body ng-app="postgreSQL">
+        <div class="container" style="margin-top:20px;"  ng-controller="postgreSQLCtrl">
+            <div class="row clearfix">
+                <div class="col-md-12 column">
+                    <div class="jumbotron">
+                        <h2 style="display: block; text-align: center;">
+                            D i s t r i b u t o r
+                        </h2>
+                    </div>
+                </div>
+            </div>            
+            
+            <div class="row clearfix"> 
+                <h3> The shop has products with total cost {{total | currency}} </h3>
+                <h3><a style="color: green; cursor: pointer" id='top'>Top products</a>: {{top}}</h3>
+                <h3> The catalog </h3>
+                <div style="max-height: 300px; overflow-y: auto;">
+                    <table class="table table-bordered table-hover table-condensed" style="table-layout: fixed;">
+                        <thead>
+                            <tr>
+                                <th width="3%" style="text-align: center;">  №  </th>
+                                <th width="17%" style="text-align: center;">  Name </th>
+                                <th width="60%" style="text-align: center;">  Description </th>
+                                <th width="10%" style="text-align: center;">  Amount </th>
+                                <th width="10%" style="text-align: center;">  Cost per item </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr ng-repeat="item in catalog">
+                                <td style="text-align: center;"> {{$index + 1}}. </td>
+                                <td> {{item.name__c}} </td>
+                                <td> {{item.description__c}} </td>
+                                <td style="text-align: center;"> {{item.amount__c}} </td>
+                                <td style="text-align: center;"> {{item.cost__c | currency}} </td>
+                            </tr>
+                        </tbody>
+                    </table>                  
+                </div>
+            </div>
+
+            <br><br>
+        </div>        
+        <script> 
+            var myApp = angular.module('postgreSQL',[ ]);              
+            myApp.controller('postgreSQLCtrl', ['$scope' ,'$http',  function($scope,$http) {              
+                $http({method: 'GET', url: '/catalog'}).
+                    success(function(data, status) {
+                        $scope.catalog = data.catalog;
+                        $scope.total = data.total;
+                    }).
+                    error(function(data, status) {
+                        $scope.error = "Request for CATALOG failed "; 
+                });
+                    
+                var getTop = function(){
+                    $http({method: 'GET', url: '/top'}).
+                        success(function(data, status) {
+                            $scope.top = data;
+                        }).
+                        error(function(data, status) {
+                            $scope.error = "Request for TOP failed "; 
+                    });
+                };      
+                getTop();
+                $("#top").click(getTop);
+                                   
+            }]); 
+        </script>        
+    </body>    
+</html>

@@ -1,0 +1,228 @@
+<apex:page docType="html-5.0" standardController="Contact" extensions="OrderingController" sidebar="false">
+    <html>
+        <head>
+            <meta charset="utf-8" />
+            <title>Ordering</title>
+            <apex:includeScript value="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js" />
+            <link rel="stylesheet" href="https://code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css" />
+            <apex:includeScript value="https://code.jquery.com/ui/1.11.4/jquery-ui.js" />
+            <apex:includeScript value="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js"/>
+            <link
+                href="{!URLFOR($Resource.bootstrap, 'bootstrap-3.3.7-dist/css/bootstrap.css')}"
+                rel="stylesheet" />
+            <link
+                href="{!URLFOR($Resource.bootstrap, 'bootstrap-3.3.7-dist/css/bootstrap-theme.min.css')}"
+                rel="stylesheet" />
+            <style type="text/css">
+                h1, h3 {
+                    display: block;
+                    text-align: center;
+                }
+                h4 {
+                	display: block;
+                	vertical-align: middle;
+                }
+                #catalog th {
+                    font-weight: bold;
+                    text-align: center;
+                }
+                #catalog td {
+                    break-word: word-wrap;
+                    vertical-align: middle;
+                    padding: 5px;
+                }
+                .chosen {
+                    color: rgb(178,0,0);
+                }
+                .pointer {
+                    cursor: pointer;
+                }
+                ul li {
+                	margin: 0 !important;
+                }
+                .pagination li.active a, .pagination li.active a:hover {
+                	background-color: rgb(238, 238, 238);
+                	border-color: rgb(204, 204, 204);
+                	color: rgb(85, 85, 85);
+                }
+                .input-group-addon {
+                	cursor: pointer;
+                }
+                input[type=number]::-webkit-outer-spin-button, input::-webkit-inner-spin-button {
+                    -webkit-appearance: none;
+                	appearance: none;
+                    margin: 0;
+                }
+                input[type=number] {
+                    -moz-appearance:textfield;
+                }
+                #total {
+                	font-size: 60px;
+                    text-align: center;
+                }
+                .order-button {
+                	font-size: 30px !important;
+                	background-color: (221,221,221) !important;
+                	background-image: none !important;
+                	border: 1px solid rgb(204,204,204) !important;
+                	color: (85,85,85) !important;
+                } 
+                .order-button:hover {
+                	background-color: rgb(238,238,238) !important;
+                }
+            </style>
+        </head>
+        <body ng-app="app" ng-controller="orderController">
+        	<h1>Finish the Ordering!</h1>
+            
+            <br/><br/><br/>
+            
+            <div class="container">
+            
+                <h2>Make sure the order satisfies you:</h2>
+                <br/><br/>
+                
+                <apex:form id="order">
+				
+                	<table class="table table-hover">
+                        <apex:repeat value="{!orderedProducts}" var="product" >
+                            <tr>
+                                <td style="width: 150px"> 
+                                    <img src="/servlet/servlet.FileDownload?file={!product.image}" class="img-responsive" width="140" height="140"/>
+                                </td>
+                                <td> <h4> {!product.name} </h4> </td>
+                                <td> <h4> ${!product.cost} <p hidden="true" id="cost-{!product.id}">{!product.cost}</p></h4> </td>
+                                <td> <h4> Available: {!FLOOR(product.amount)} </h4> </td>
+                                <td>
+                                    <div  class="form-inline pull-right">
+                                        <div class="form-group">
+                                            <div class="input-group">
+                                                <div hidden="true" id="order-number-max-{!product.id}">{!FLOOR(product.amount)}</div>
+                                                <div class="input-group-addon" onclick="decrement('{!product.id}')"><i class="glyphicon glyphicon-minus"/></div>
+                                                <div id="order-number-{!product.id}">
+                                                    <apex:input type="number" value="{!product.orderNumber}" 
+                                                                onchange="checkOrderNumber('{!product.id}')" styleClass="form-control" style="width: 90px; text-align: center"/>
+                                                </div>
+                                                <div class="input-group-addon" onclick="increment('{!product.id}')"><i class="glyphicon glyphicon-plus"/></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </apex:repeat>
+                    </table>
+                    
+                <br/><br/><br/>
+                    
+                    <div class="row">
+                
+                    	<div class="col-sm-6 form-horizontal">
+                            <h2>Then enter data about yourself:</h2>
+                            <br/><br/>
+                        	<div class="form-group">
+                            	<label class="control-label col-sm-4" for="firstName">First Name:</label>
+                                <div class="col-xs-8">
+                                	<apex:inputField styleClass="form-control" id="firstName" value="{!customer.FirstName}" required="true"/>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                            	<label class="control-label col-sm-4" for="lastName">Last Name:</label>
+                                <div class="col-xs-8">
+                                	<apex:inputField styleClass="form-control" id="lastName" value="{!customer.LastName}" required="true"/>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="control-label col-sm-4" for="email">Email:</label>
+                                <div class="col-xs-8">
+                                	<apex:inputField styleClass="form-control" id="email" value="{!customer.Email}" required="true"/>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="control-label col-sm-4" for="phone">Phone:</label>
+                                <div class="col-xs-8">
+                                	<apex:inputField styleClass="form-control" id="phone" value="{!customer.Phone}" required="true"/>
+                                </div>
+                            </div>
+                        </div>  
+                        
+                        <div class="col-sm-6">
+                            <h2 style="display: block; text-align: center">Your total cost is</h2>
+                            <br/>
+                            <div id="total"/>
+                        </div>
+                        
+                	</div>
+                    
+                    <br/><br/>
+
+                    <div class="col-sm-4 col-sm-offset-4">
+                     	<apex:commandButton action="{!createOrder}"  value="Order" styleClass="order-button" style="width: 100%" />
+                    </div>
+
+                    
+                <br/><br/><br/>
+                
+                </apex:form>
+            
+            </div>
+            
+            <script type="text/javascript">
+                   
+            $(document).ready(function(){
+            	countTotal();    
+            });
+            
+            function checkOrderNumber(productId) {
+                var orderNumber = document.getElementById("order-number-" + productId).childNodes[0];
+                var max = parseInt(document.getElementById("order-number-max-" + productId).innerHTML);
+                if(orderNumber.value > max) {
+                    alert(orderNumber.value + '   ' + max);
+                    orderNumber.value = max;
+                } else if (orderNumber.value < 1) {
+                	orderNumber.value = 1;
+                }
+                countTotal();
+            }
+
+            function increment(productId) {
+                var orderNumber = document.getElementById("order-number-" + productId).childNodes[0];
+                var max = parseInt(document.getElementById("order-number-max-" + productId).innerHTML);
+                if(orderNumber.value < max) {
+                    orderNumber.value++;
+                    countTotal();
+                }
+            }
+
+            function decrement(productId) {
+                var orderNumber = document.getElementById("order-number-" + productId).childNodes[0];
+                if(orderNumber.value > 1) {
+                    orderNumber.value--;
+                    countTotal();
+                }
+            }
+            
+            var idList = getParameterByName('order').split(',');
+            
+            function countTotal() {
+                var total = 0;
+                _.each(idList, function(id) {
+                    total += $("#cost-" + id).html() * $("#order-number-" + id + " input").val();
+                });
+                $("#total").html('$' + total);
+            }
+            
+            function getParameterByName(name) {
+                var url = window.location.href;
+                name = name.replace(/[\[\]]/g, "\\$&");
+                var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+                    results = regex.exec(url);
+                if (!results) return null;
+                if (!results[2]) return '';
+                return decodeURIComponent(results[2].replace(/\+/g, " "));
+            }
+            
+            </script>
+            <apex:includeScript value="{!URLFOR($Resource.bootstrap, 'bootstrap-3.3.7-dist/js/bootstrap.min.js')}"/>
+  		</body>
+  	</html>
+</apex:page>
