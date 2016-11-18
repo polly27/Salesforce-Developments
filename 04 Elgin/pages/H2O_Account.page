@@ -1,0 +1,275 @@
+<apex:page applyBodyTag="false" 
+  applyHtmlTag="false" 
+  showHeader="false" 
+  standardStylesheets="false" 
+  docType="html-5.0" 
+  controller="H2O_AccountController">
+
+  <apex:variable value="https://s3.amazonaws.com/fonteva-customer-media/00Dq00000000PqpEAE" var="cdnBaseUrl"/>
+
+  <apex:composition template="CPBase__template">{!cdnBaseUrl}
+
+    <apex:define name="pageTitle">My Account</apex:define><!--/[def:pageTitle]-->
+    
+    <apex:define name="pageStyles">
+        <style>
+          #main h3.modal-title { color: #fff!important; }
+          #main h3.section-heading { color: #fff!important; background: #0059a1!important; margin-left: 0!important; }
+          .table-invoices {margin-bottom: 0;}
+          .table-invoices thead tr th {background-color: #c3c3c3; margin: 0; padding: 3px 10px;}
+          .table-invoices tbody tr td {background-color: #f2f2f2; padding: 15px 10px;}
+        </style>
+    </apex:define><!--/[def:pageStyles]-->
+
+    <apex:define name="pageMain">
+      
+      <section class="page-section">
+        
+        <div class="container">
+          <div class="row">
+            <div class="col-md-12">
+              <div class="well">
+
+                <h2>My Account</h2>
+
+                <apex:outputPanel id="frameworkMessages">
+                  <Framework:messages />
+                </apex:outputPanel>
+
+              <div class="row">
+                <div class="col-md-4">
+                  <div class="card">
+                    <div class="card-heading">{!$User.FirstName} {!$User.LastName} <small><a href="/secur/logout.jsp">Logout</a></small></div>
+                    <hr/>
+                    <div class="row">
+                    <div class="col-xs-12">
+
+                    <strong>You owe: <span id="total-account-balance"></span></strong>
+                    
+                    <br/>
+                    
+                    <hr/>
+
+                    <h4>Your Water Meter Locations</h4>
+
+                    <div class="list-group">
+                      <div class="list-group">
+
+                        <apex:variable value="{!0}" var="rowNum"/>
+                        
+                        <apex:repeat value="{!CustomerLocations}" var="clc">
+                          <a href="#" class="list-group-item">{!clc.MUSW__Parcel__r.Name}</a>
+                          <apex:variable var="rowNum" value="{!rowNum + 1}"/>
+                        </apex:repeat>
+
+                        <br/>
+                        ({!rowNum}) water meter location(s) are currently linked to your account.
+
+                      </div>
+                    </div>
+                    </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-8">
+                  <div class="card">
+
+                    <!-- BEGIN INVOICE LIST -->
+
+                      <div class="row">
+
+                        <div class="col-md-12">
+
+                          <!-- <apex:outputPanel layout="none" rendered="{!HasOutstandingInvoices}"> -->
+                          <apex:outputPanel >
+
+                            <h3 class="section-heading">
+                              {!$Label.CPBase__Profile_Page_Payments_Tab_Label}
+                            </h3>
+
+                            <div class="em-instructions m-t-10 m-b-20">
+                              
+                              
+                              <small><em>To pay your water bill, select the appropriate bills in the table below and then click the 'Apply Payment' button to continue to the credit card payment page.</em></small>
+
+                            </div>
+
+                            <c:StatementTable show="all" customer="{!customerContactId}"/>
+
+                            <br/>
+
+                            <p class="f-s-16">
+                              {!$Label.CPbase__Profile_Page_Outstanding_Invoices_Selected_For_Payment_Summary} <strong id="selected-payment-total"></strong>
+                            </p>
+
+                            <div id="invoice-payment-button-container" class="text-center p-t-10 p-b-20">
+                              <a href="#" id="pay-invoices" class="btn btn-success btn-lg">Apply Payment</a>
+                            </div>
+
+                          </apex:outputPanel>
+
+                          <!-- <apex:outputPanel rendered="{!NOT(HasOutstandingInvoices)}">
+                            <h4>{!$Label.CPBase__Profile_Page_Transactions_No_Transaction_History_Message}</h4>
+                          </apex:outputPanel> -->
+
+                        </div><!-- / col-md-12 -->
+
+                      </div><!-- / row -->
+
+                      <div class="modal fade em-window-modal" id="invoiceModal" tabindex="-1" role="dialog" aria-hidden="true">
+                        <div class="modal-dialog">
+                          <div class="modal-content table-block">
+                            <div class="modal-header">
+                              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true"></span>
+                              </button>
+                              <h3 class="modal-title">{!$ObjectType.OrderApi__Invoice__c.Label}</h3>
+                            </div>
+                            <div class="modal-body p-25">
+                              <div class="box-content-wrapper container-fluid">
+                                <div class="row">
+                                  <div class="col-xs-12" id="invoice-modal-detail">
+
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="modal-footer"> </div>
+                          </div>
+                        </div>
+                      </div>
+                      <script id="invoice-modal-template" type="text/x-handlebars-template">
+                        <iframe id="iframe_{{invoiceId}}" frameborder="none" border="none" src="{!$Page.OrderApi__web_invoice}?id={{invoiceId}}&hideHTMLHead=true" width="100%" scrolling="false" onload="em.setFrameHeight(this);"></iframe>
+                      </script>
+
+                      <script type="text/javascript">
+                        
+                        var balance_total = {!BalanceTotal};
+
+                        var setAccountBalance = function() {
+                          $("#total-account-balance").html(currencyComponentAPI.formatCurrency(balance_total,'{!JSENCODE(CurrencyIsoCode)}'));
+                        };
+
+                        var selected_payment_total = 0.00;
+                        
+                        var setSelectedPaymentTotal = function() {
+                            $("#selected-payment-total").html(currencyComponentAPI.formatCurrency(selected_payment_total,'{!JSENCODE(CurrencyIsoCode)}'));
+                        };
+
+                        $(function(){
+                          
+                          setAccountBalance();
+
+                          setSelectedPaymentTotal();
+
+                          $(document).on('shown.bs.tab','#payments', function(e) {
+                              setSelectedPaymentTotal();
+                          });
+                          $('#pay-invoices').addClass('disabled');
+                          $('.view-invoice-button').click(function(e) {
+                            e.preventDefault();
+                            var data = {};
+                            data.invoiceId = $(this).data('id');
+                            var invoiceModalTemplateHTML = $("#invoice-modal-template").html();  
+                            var invoiceModalTemplate = Handlebars.compile(invoiceModalTemplateHTML);  
+                            $('#invoice-modal-detail').html(invoiceModalTemplate(data));
+                            $('#invoiceModal').modal('show');
+                          });
+                      
+//                          $('#selected-payment-total').html(Framework.currency(payment_total));
+
+                          $('#check-all, .checkbox-statement-invoices, .checkbox-invoice').change(function() {
+                            countPaymentTotal();
+                          });
+                          
+
+                          $("#pay-invoices").on("click", function(e) {
+
+                            e.preventDefault();
+
+                            var waitMessage = Object.create(em.message);
+                            waitMessage.type = "info";
+                            waitMessage.title = "{!JSENCODE($Label.CPBase__Processing_Request_Message_Title)}";
+                            waitMessage.text = "";
+                            waitMessage.showCancelButton = false;
+                            waitMessage.showConfirmButton = false;
+                            waitMessage.alert();
+
+
+                            var invoices = [];
+                            var idx = 0;
+
+                            $('.checkbox-invoice').each(function() {
+                              if ($(this).prop("checked")) {
+                                invoices[idx] = $(this).data("id");
+                                idx++;
+                              }
+                            });
+
+                            var invoice_id_csv = '';
+
+                            for (var n = 0; n < invoices.length; n++) {
+                              invoice_id_csv += invoices[n];
+                              if ((n + 1) !== invoices.length) {
+                                invoice_id_csv += ',';
+                              }
+                            }
+
+                            var customer_id = '{!JSENCODE(con.Id)}';
+                            var store_id = '{!JSENCODE(CurrentSite.OrderApi__Store__c)}';
+
+                            Visualforce.remoting.Manager.invokeAction(
+                              '{!$RemoteAction.H2O_AccountController.setupInvoiceEpayment}',
+                              customer_id,
+                              invoice_id_csv,
+                              store_id,
+                              function(result, event) {
+                                if (event.status) {
+                                  window.location = result;
+                                } else {
+                                  var errorMessage = Object.create(em.message);
+                                  errorMessage.type = "error";
+                                  errorMessage.title = "{!JSENCODE($Label.CPBase__Generic_Error_Message_Title)}";
+                                  errorMessage.text = "{!JSENCODE($Label.CPBase__Generic_Error_Message_Text)}";
+                                  errorMessage.alert();
+                                }
+                              },
+                              {
+                                escape: false
+                              }
+                            );
+                          });
+                        });
+
+                        function countPaymentTotal() {
+                          selected_payment_total = 0.0;
+                          $('.checkbox-invoice').each(function(){
+                            if($(this).is(':checked')) {
+                              selected_payment_total += parseFloat($(this).data('balanceDue'));
+                            }
+                          });
+                          setSelectedPaymentTotal();
+                          if(selected_payment_total > 0.0) {
+                            $('#pay-invoices').removeClass('disabled');
+                          } else {
+                            $('#pay-invoices').addClass('disabled');
+                          }
+                        }
+
+                      </script>
+
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          </div>
+          </div>
+
+      </section><!-- /section -->
+
+    </apex:define><!--/[def:pageMain]-->
+
+  </apex:composition><!--/[composition]-->
+
+</apex:page>

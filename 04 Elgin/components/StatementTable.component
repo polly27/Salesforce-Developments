@@ -1,0 +1,244 @@
+<apex:component layout="none" controller="H2O_StatementTableController">
+
+	<apex:attribute name="show" description="Must be 'all'/'paid'/'outstanding' to show correct table." type="String" required="true" assignTo="{!showType}"/>
+	<apex:attribute name="customer" description="Customer contact id" type="Id" required="true" assignTo="{!customerContactId}"/>
+
+	<!--          JQuery            -->
+	<apex:includeScript value="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js" />
+	<link rel="stylesheet" href="https://code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css" />
+	<apex:includeScript value="https://code.jquery.com/ui/1.11.4/jquery-ui.js" />
+	<!--          JQuery             -->
+
+	<apex:outputPanel rendered="{!Statements == null}">
+		<h3>For developers only. Invalid component parameter. 'show' must be 'all'/'paid'/'outstanding'.</h3>
+	</apex:outputPanel>
+
+<apex:outputPanel rendered="{!Statements.size == 0}">
+	<h3>Statements not found.</h3>
+</apex:outputPanel>
+
+<apex:outputPanel rendered="{!Statements.size != 0}">
+<table>
+	<thead>
+		<tr>
+			<th><input type="checkbox" id="check-all" onchange="checkAll()" /></th>
+			<th>Statement Number</th>
+			<th>Location</th>
+			<th>Date Due</th>
+			<th>Amount Due</th>
+		</tr>
+	</thead>
+	<tbody>
+
+		<apex:variable var="count" value="{!1}"/>
+		<apex:repeat value="{!Statements}" var="statement">
+		<tr>
+			<td class="selectbutton">
+				<input type="checkbox" class="checkbox-statement-invoices" id="checkbox-statement-invoices-{!count}" onchange="checkAllInvoicesPerStatement('{!count}')" data-number="{!count}" data-num-of-invoices='{!statement.Bills__r.size}' data-value='{!statement.Total_Balance_Due__c}'/>
+			</td>
+			<td>
+				<a href="#" onclick="switchMenu('{!count}', '{!statement.Bills__r.size}')">
+					{!statement.Name}
+				</a>
+			</td>
+			<td>
+				{!statement.Location__c}
+			</td>
+			<td>
+				<apex:outputField value="{!statement.Billing_End_Date__c}" />
+			</td>
+			<td class="balancedue" data-value="{!statement.Total_Balance_Due__c}">
+			</td>
+		</tr>
+
+		<apex:variable var="countInternal" value="{!1}"/>
+		<tr id="invoicenumber-{!count}-{!countInternal}" style="display:none;">
+			<td/>
+			<td colspan="4" style="padding: 0">
+				<table class="table-invoices">
+					<thead>
+						<tr>
+							<th/>
+							<th>Invoice Number</th>
+							<th>Category</th>
+							<th>Date Due</th>
+							<th>Amount Due</th>
+						</tr>
+					</thead>
+					<tbody>
+						<apex:repeat var="invoice" value="{!statement.Bills__r}">
+						<tr>
+							<td class="selectbutton" style="padding: 0; text-align: center;">
+								<input type="checkbox" class="checkbox-invoice" data-id="{!invoice.ID}" data-balance-due="{!invoice.OrderApi__Balance_Due__c}" id="checkbox-{!count}-{!countInternal}" onchange="checkOtherInvoices('{!count}')" data-level="{!invoice.Pay_order__c}" data-value="{!invoice.OrderApi__Balance_Due__c}"/>
+							</td>
+							<td class="invoicenumber">
+								<a href="#" class="view-invoice-button" id="{!invoice.ID}" data-id="{!invoice.ID}">
+									{!invoice.Name}
+								</a>
+							</td>
+							<td>
+								{!invoice.Bill_Category__c}
+							</td>
+							<td class="duedate">
+								<apex:outputField value="{!invoice.OrderApi__Due_Date__c}" />
+							</td>
+							<td class="balancedue" data-value="{!invoice.OrderApi__Balance_Due__c}">
+							</td>
+						</tr>
+						<apex:variable value="{!countInternal+1}" var="countInternal"/>
+					</apex:repeat>
+				</tbody>
+			</table>
+		</td>
+	</tr>
+	<apex:variable value="{!count+1}" var="count"/>
+</apex:repeat>
+
+</tbody>
+</table>
+
+</apex:outputPanel>
+
+<script src="/resource/1448055978000/Framework__assets/assets/currency/accounting.min.js"></script>
+<script src="/resource/1448055978000/Framework__assets/assets/currency/currencytable.js"></script>
+<script type="text/javascript">
+
+	var currencyComponentAPI = currencyComponentAPI || (function () {
+		return {
+			formatCurrency: function(value,isocode) {
+				if (typeof isocode === 'undefined' || isocode == null) {
+					throw new Error('Invalid isocode');
+				}
+				return new currencyTable('USD').format(value,isocode,false);
+			}
+		};
+	})();
+
+	$(function(){
+
+		setDisabledCheckboxes();
+
+	/* if invoice or statement paid */
+
+		$('.balancedue').each(function(index, el) {
+			if(parseInt($(this).data('value')) == 0) {
+				$(this).html("<span style='display: inline-block; background:green; color:white; margin-right:10px; padding:3px 5px;'>PAID IN FULL</span>");
+			} else {
+				$(this).html(currencyComponentAPI.formatCurrency($(this).data('value'),'{!JSENCODE(CurrencyIsoCode)}'));
+			}
+		});
+
+		$('.checkbox-statement-invoices').each(function(index, el) {
+			if(parseInt($(this).data('value')) == 0) {
+				$(this).remove();
+			}
+		});
+
+		$('.checkbox-invoice').each(function(index, el) {
+			if(parseInt($(this).data('value')) == 0) {
+				$(this).remove();
+			}
+		});
+
+	/* end */
+
+	});
+
+	function setDisabledCheckboxes() {
+		$('.checkbox-statement-invoices').each(function() {
+			disableInv($(this).data('number'));
+		});
+	}
+
+	$.fn.exists = function () {
+	    return this.length !== 0;
+	}
+
+	function disableInv(stm) {
+		var able = true;
+		var level = -1;
+		var total = $("#checkbox-statement-invoices-" + stm).data('numOfInvoices');
+		for(i = 1; i <= total; i++) {
+			var element = $('#checkbox-' + stm + '-' + i);
+			if(element.exists()) {
+				if(element.data('level') > level) {
+					if(!able) {
+						element.prop('checked', false);
+						element.prop('disabled', true);
+					} else {
+						element.prop('disabled', false);
+						if(!element.is(':checked')) {
+							able = false;
+						}
+						level = element.data('level');
+					}
+				} else {
+					element.prop('disabled', false);
+					if(!element.is(':checked')) {
+						able = false;
+					} 
+				}
+			}
+		}
+	}
+
+	function checkAll() {
+		var value = $("#check-all").prop("checked");
+		$('.checkbox-statement-invoices').each(function() {
+			$(this).prop("checked", value).change();
+		});
+	}
+
+	function checkAllInvoicesPerStatement(stm) {
+		var value = $("#checkbox-statement-invoices-" + stm).is(':checked');
+		var total = $("#checkbox-statement-invoices-" + stm).data('numOfInvoices');
+		for(i = 1; i <= total; i++) {
+			var element = $('#checkbox-' + stm + '-' + i);
+			if(element.exists()) {
+				element.prop('checked', value);
+				element.removeAttr("disabled");
+			}
+		}
+		setDisabledCheckboxes();
+		checkOtherStatements();
+	}
+
+	function checkOtherInvoices(stm) {
+		var total = $("#checkbox-statement-invoices-" + stm).data('numOfInvoices');
+		var value = true;
+		for(i = 1; value && i <= total; i++) {
+			var element = $('#checkbox-' + stm + '-' + i);
+			if(element.exists()) {
+				value = element.is(':checked');
+			}
+		}
+		var checkboxStInv = $("#checkbox-statement-invoices-" + stm);
+		if(element.exists() && checkboxStInv.is(':checked') != value) {
+			checkboxStInv.prop('checked', value);
+			checkOtherStatements();
+		}
+		setDisabledCheckboxes();
+	}
+
+	function checkOtherStatements() {
+		var value = true;
+		$('.checkbox-statement-invoices').each(function() {
+			if(!$(this).is(':checked')) {
+				value = false;
+				return false;
+			}
+		});
+		$("#check-all").prop('checked', value);
+	}
+
+	function switchMenu(stm, total) {
+		for(i = 1; i <= total ;i++) {
+			var invoicesRow = $('#invoicenumber-' + stm + '-' + i);
+			if(invoicesRow.exists()) {
+				invoicesRow.css('display') == "none" ? invoicesRow.show() : invoicesRow.hide();
+			}
+		}
+	} 
+
+</script>
+</apex:component>
