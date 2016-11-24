@@ -1,0 +1,160 @@
+<apex:page showHeader="true" sidebar="true" controller="BraintreeController">
+	<apex:includeScript value="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js" />
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css" />
+    <apex:includeScript value="https://code.jquery.com/ui/1.11.4/jquery-ui.js" />
+	
+	<apex:pageBlock title="PayPal">
+		<apex:pageBlockSection columns="1">
+			<apex:outputText>
+				Pay $10.00<br/>
+				ClientToken is for testing<br/>
+				Nonce is for testing
+			</apex:outputText>
+			<form id='paypal-form'>
+				<div id="paypal-container"></div>
+				<button type='submit'>Pay</button>
+			</form>
+			<apex:outputText>
+				<div id='paypal-result'></div>
+			</apex:outputText>
+		</apex:pageBlockSection>
+	</apex:pageBlock>
+
+	<apex:pageBlock title="CreditCard">
+		<apex:pageBlockSection columns="1">
+			<apex:outputText>
+				Pay $10.00<br/>
+				ClientToken is for testing<br/>
+				Nonce is for testing
+			</apex:outputText>
+			<form id="credit-card-form">
+			  Card № <input data-braintree-name="number" value="4111111111111111"/><br/>
+			  Expiration date <input data-braintree-name="expiration_date" value="10/20"/><br/>
+		<!--
+			  or instead of date<br/>
+			  Expiration month <input data-braintree-name="expiration_month" value="10"/><br/>
+			  Expiration year <input data-braintree-name="expiration_year" value="2020"/><br/>
+		-->
+			  Postal code <input data-braintree-name="postal_code" value="94107"/><br/>
+  			  Cardholder <input data-braintree-name="cardholder_name" value="John Smith"/><br/>
+			  <button type="submit">Pay</button>
+			</form>
+			<apex:outputText>
+				<div id='credit-card-result'></div>
+			</apex:outputText>
+		</apex:pageBlockSection>
+	</apex:pageBlock>
+
+
+	<script src="https://js.braintreegateway.com/js/braintree-2.30.0.min.js"></script>
+	<script>
+
+		var payPalNonce = 'fake-valid-nonce';
+
+		var creditCardNonce = 'fake-valid-nonce';
+
+		$(document).ready(function($) {
+			
+			var clientToken = 'eyJ2ZXJzaW9uIjoyLCJhdXRob3JpemF0aW9uRmluZ2VycHJpbnQiOiI0MzdkNzM5MGU3YWJhNDNhODQzZTRhYjg1NzI5YWNjMGEzYzVlNTFlMTFkZDJmZDc3NWIxYjc4ZmZlNWMwZWY4fGNyZWF0ZWRfYXQ9MjAxNi0xMS0yMlQxMDoyNzowMy40NzQ1MTc2NzgrMDAwMFx1MDAyNm1lcmNoYW50X2lkPTM0OHBrOWNnZjNiZ3l3MmJcdTAwMjZwdWJsaWNfa2V5PTJuMjQ3ZHY4OWJxOXZtcHIiLCJjb25maWdVcmwiOiJodHRwczovL2FwaS5zYW5kYm94LmJyYWludHJlZWdhdGV3YXkuY29tOjQ0My9tZXJjaGFudHMvMzQ4cGs5Y2dmM2JneXcyYi9jbGllbnRfYXBpL3YxL2NvbmZpZ3VyYXRpb24iLCJjaGFsbGVuZ2VzIjpbXSwiZW52aXJvbm1lbnQiOiJzYW5kYm94IiwiY2xpZW50QXBpVXJsIjoiaHR0cHM6Ly9hcGkuc2FuZGJveC5icmFpbnRyZWVnYXRld2F5LmNvbTo0NDMvbWVyY2hhbnRzLzM0OHBrOWNnZjNiZ3l3MmIvY2xpZW50X2FwaSIsImFzc2V0c1VybCI6Imh0dHBzOi8vYXNzZXRzLmJyYWludHJlZWdhdGV3YXkuY29tIiwiYXV0aFVybCI6Imh0dHBzOi8vYXV0aC52ZW5tby5zYW5kYm94LmJyYWludHJlZWdhdGV3YXkuY29tIiwiYW5hbHl0aWNzIjp7InVybCI6Imh0dHBzOi8vY2xpZW50LWFuYWx5dGljcy5zYW5kYm94LmJyYWludHJlZWdhdGV3YXkuY29tLzM0OHBrOWNnZjNiZ3l3MmIifSwidGhyZWVEU2VjdXJlRW5hYmxlZCI6dHJ1ZSwicGF5cGFsRW5hYmxlZCI6dHJ1ZSwicGF5cGFsIjp7ImRpc3BsYXlOYW1lIjoiQWNtZSBXaWRnZXRzLCBMdGQuIChTYW5kYm94KSIsImNsaWVudElkIjpudWxsLCJwcml2YWN5VXJsIjoiaHR0cDovL2V4YW1wbGUuY29tL3BwIiwidXNlckFncmVlbWVudFVybCI6Imh0dHA6Ly9leGFtcGxlLmNvbS90b3MiLCJiYXNlVXJsIjoiaHR0cHM6Ly9hc3NldHMuYnJhaW50cmVlZ2F0ZXdheS5jb20iLCJhc3NldHNVcmwiOiJodHRwczovL2NoZWNrb3V0LnBheXBhbC5jb20iLCJkaXJlY3RCYXNlVXJsIjpudWxsLCJhbGxvd0h0dHAiOnRydWUsImVudmlyb25tZW50Tm9OZXR3b3JrIjp0cnVlLCJlbnZpcm9ubWVudCI6Im9mZmxpbmUiLCJ1bnZldHRlZE1lcmNoYW50IjpmYWxzZSwiYnJhaW50cmVlQ2xpZW50SWQiOiJtYXN0ZXJjbGllbnQzIiwiYmlsbGluZ0FncmVlbWVudHNFbmFibGVkIjp0cnVlLCJtZXJjaGFudEFjY291bnRJZCI6ImFjbWV3aWRnZXRzbHRkc2FuZGJveCIsImN1cnJlbmN5SXNvQ29kZSI6IlVTRCJ9LCJjb2luYmFzZUVuYWJsZWQiOmZhbHNlLCJtZXJjaGFudElkIjoiMzQ4cGs5Y2dmM2JneXcyYiIsInZlbm1vIjoib2ZmIn0=';
+
+			Visualforce.remoting.Manager.invokeAction(
+	            '{!$RemoteAction.BraintreeController.getClientToken}',
+	            function(result, event) {
+	                if(event.status) {
+	                	/* 
+	                		Remove when not a sandbox. 
+							It's a single-time code for payment transaction
+						*/
+	                    //clientToken = result;
+	                    console.log('clientToken: ' + clientToken);
+	                    setupPayPalBraintree(clientToken);
+	                    setupCreditCardBraintree(clientToken);
+	                } else {
+	                    alert(event.message);    
+	                }
+	            });
+
+	        $('#paypal-form').submit(function(event) {
+	        	payPalCheckout();
+	        	return false;
+	        });
+
+	        $('#credit-card-form').submit(function(event) {
+	        	creditCardCheckout();
+	        	return false;
+	        });
+
+	        
+		});
+
+
+		function setupPayPalBraintree(clientToken) {
+			braintree.setup(clientToken, "custom", {
+			    paypal: {
+			    	container: "paypal-container",
+			    	singleUse: true, // Required
+				    amount: 10.00, // Required
+				    currency: 'USD', // Required
+				    locale: 'en_US',
+				    enableShippingAddress: true,
+				    shippingAddressOverride: {
+				      recipientName: 'Scruff McGruff',
+				      streetAddress: '1234 Main St.',
+				      extendedAddress: 'Unit 1',
+				      locality: 'Chicago',
+				      countryCodeAlpha2: 'US',
+				      postalCode: '60652',
+				      region: 'IL',
+				      phone: '123.456.7890',
+				      editable: false
+				    }
+			    },
+			    onPaymentMethodReceived: function (obj) {
+			   	    /* 
+			      		Remove when not a sandbox. 
+						It's a single-time code for payment transaction
+					*/
+				   	// payPalNonce = obj.nonce; 
+			      	console.log('paypal nonce: ' + obj.nonce);
+			    }
+			  });
+		}		
+
+		function setupCreditCardBraintree(clientToken) {
+			braintree.setup(clientToken, 'custom', {
+				id: 'credit-card-form',
+				onPaymentMethodReceived: function (obj) {
+					/* 
+			      		Remove when not a sandbox. 
+						It's a single-time code for payment transaction
+					*/
+				   	// creditCardNonce = obj.nonce; 
+				    console.log('credit card nonce: ' + obj.nonce);
+				}
+			});
+		}
+
+		function payPalCheckout() {
+			Visualforce.remoting.Manager.invokeAction(
+	            '{!$RemoteAction.BraintreeController.payPalCheckout}',
+	            payPalNonce,
+	            function(result, event) {
+	            	$('#paypal-result').html(result);
+	            	console.log('paypal result: ' + result);
+	            });
+		}	
+
+		function creditCardCheckout() {
+			Visualforce.remoting.Manager.invokeAction(
+	            '{!$RemoteAction.BraintreeController.creditCardCheckout}',
+	            creditCardNonce,
+	            function(result, event) {
+	            	$('#credit-card-result').html(result);
+	            	console.log('credit card result: ' + result);
+	            });
+		}		
+	
+
+	</script>
+
+</apex:page>

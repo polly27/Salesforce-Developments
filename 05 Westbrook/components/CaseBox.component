@@ -1,0 +1,258 @@
+<apex:component controller="CaseBoxController" id="caseBoxComponent" allowDml="true">
+    <apex:attribute type="Case" name="caseObject" assignTo="{!currentCase}" description="Case Object For CaseBoxController" required="true"/>
+    <apex:attribute type="Integer" name="casenum" assignTo="{!caseNumber}" description="Case number" required="false"/>
+
+        <style>
+            .labelLike {
+                background:rgba(0,0,0,0);
+                border:none;
+                overflow: auto;
+                resize: none;
+                /*min-height:10px;*/
+            }
+             .hideElem {
+            display: none;
+        }
+        </style>
+
+        <apex:pageBlock title="Case Number: {!currentCase.CaseNumber}" id="caseView">
+            <apex:actionRegion >
+
+                <!-- <apex:pageBlockButtons location="top">
+                    <apex:commandButton action="{}" value="Dupe Check" style="float:right;"/>
+                </apex:pageBlockButtons> -->
+
+                <!-- <h1>{!currentCase.Property_Address_Post_Code__c}</h1> -->
+
+                <!-- <apex:inputHidden value="{!currentCase.Property_Address_Post_Code__c}"/> -->
+
+                <apex:commandLink styleClass="btn" style="text-decoration:none; padding:4px; float:right;" value="Dupe Check" onclick="goToReport('{!currentCase.Property_Address_Post_Code__c}', '{!currentCase.Transaction_Type__c}');" reRender="true">
+                </apex:commandLink>
+
+                <apex:pageblocksection columns="1">
+                    <apex:inputField value="{!currentCase.RecordTypeId}">
+                       <apex:actionSupport event="onchange" action="{!onRecordTypeChange}" reRender="caseView"/>
+                    </apex:inputField>
+                    <apex:repeat value="{!$ObjectType.Case.FieldSets.Conveyance_Case_Detail}" var="field">
+                        <apex:inputField value="{!currentCase[field]}" required="{!field.required}" rendered="{!$ObjectType.Case.fields[field].updateable}"/>
+                        <apex:outputField value="{!currentCase[field]}" rendered="{! !$ObjectType.Case.fields[field].updateable}"/>
+                    </apex:repeat>
+                </apex:pageblocksection>
+                <!-- <h1>CaSE :{!caseNumber}</h1> -->
+                <apex:pageblocksection title="Property Details" id="propertyDetails">
+                    <!-- <apex:inputField value="{!currentCase.Post_Code__c}"/> -->
+
+                    <!-- <apex:pageBlockSection > -->
+                        <!-- <pca:AddressFinder label="Postal Code" record="{!currentCase}" address="CaseCustomerAddress"/> -->
+                    <!-- </apex:pageBlockSection> -->
+
+                    <!-- <apex:pageBlockSectionItem >
+                        <apex:outputLabel value="{!$ObjectType.Case.fields.Property_Post_Code__c.Label}"/>
+                        <apex:outputPanel >
+                            <pca:AddressFinder label="Address" record="{!currentCase}" address="Property_Address_Street__c" />
+                        </apex:outputPanel>
+                    </apex:pageBlockSectionItem> -->
+
+                    <!-- <apex:inputField value="{!currentCase.Customer_Address__c}"/> -->
+    <!--                 <apex:pageBlockSectionItem >
+                        <apex:outputLabel value="{!$ObjectType.Case.fields.Customer_Address__c.Label}"/>
+                        <apex:outputPanel >
+                            <pca:AddressFinder label="Address" record="{!currentCase}" address="{!currentCase.Customer_Address__c}"/>
+                        </apex:outputPanel>
+                    </apex:pageBlockSectionItem> -->
+
+                    <apex:repeat value="{!allFieldsForCase}" var="f">
+                        <apex:pageBlockSectionItem rendered="{! !f.isEmpty && !$ObjectType.Case.fields[f.name].updateable}">
+                            <apex:outputLabel value="{!$ObjectType.Case.fields[f.name].label}"/>
+                            <apex:outputField value="{!currentCase[f.name]}"/>
+                        </apex:pageBlockSectionItem>
+
+                        <apex:pageBlockSectionItem rendered="{! !f.isEmpty && $ObjectType.Case.fields[f.name].updateable}">
+                            <apex:outputLabel value="{!$ObjectType.Case.fields[f.name].label}"/>
+                            <apex:inputField value="{!currentCase[f.name]}" required="{!f.isRequired}"/>
+                        </apex:pageBlockSectionItem>
+                        <apex:pageBlockSectionItem rendered="{!f.isEmpty}"/>
+                    </apex:repeat>
+
+                    <!-- <apex:repeat value="{!$ObjectType.Case.FieldSets.Conveyance_Property_Detail}" var="field">
+                        <apex:inputField styleClass="centerAlign" value="{!currentCase[field]}"/>
+                    </apex:repeat> -->
+                    <!-- <pca:AddressFinder label="Property" record="{!currentCase}" address="CaseCustomerAddress{!caseNumber}"/> -->
+
+                    <apex:pageBlockSectionItem id="address">
+                        <apex:outputPanel>
+                            <table width="100%">
+                              <col width="36%" align="right"/>
+                              <col width="64%"/>
+                                <tr>
+                                    <td class="labelCol vfLabelColTextWrap first">
+                                        <apex:outputLabel value="Search" for="search"/>
+                                    </td>
+                                    <td>
+                                        <apex:inputText id="search" style="padding:5px;margin-bottom: 35px;" html-placeholder="Start typing the address..."/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="labelCol vfLabelColTextWrap">
+                                      <apex:outputText id="addressOutput" style="padding-top: 0;" value="Address"/>  
+                                      <apex:outputLabel id="pcaStreetLbl" value="Street" styleClass="hideElem"/>  
+                                    </td>
+                                    <td>
+                                        <apex:inputField id="pca_street" styleClass="labelLike" value="{!currentCase.Property_Address_Street__c}" style="margin-top: 3px; margin-bottom: 5px;"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="labelCol vfLabelColTextWrap">
+                                      <apex:outputLabel id="pcaCityLbl" value="City" styleClass="hideElem"/>
+                                    </td>
+                                    <td>
+                                      <apex:inputField id="pca_city" styleClass="labelLike" value="{!currentCase.Property_Address_Town__c}" style="margin-bottom: 5px;"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="labelCol vfLabelColTextWrap">
+                                      <apex:outputLabel id="pcaStateLbl" value="County" styleClass="hideElem"/>
+                                    </td>
+                                    <td>
+                                      <apex:inputField id="pca_state" styleClass="labelLike" value="{!currentCase.Property_Address_County__c}" style="margin-bottom: 5px;"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="labelCol vfLabelColTextWrap">
+                                      <apex:outputLabel id="pcaPostcodeLbl" value="Postal Code" styleClass="hideElem"/>
+                                    </td>
+                                    <td>
+                                      <apex:inputField id="pca_postcode" styleClass="labelLike" value="{!currentCase.Property_Address_Post_Code__c}" style="margin-bottom: 5px;"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="labelCol vfLabelColTextWrap">
+                                      <apex:outputLabel id="pcaCountryLbl" value="Country" styleClass="hideElem"/>
+                                    </td>
+                                    <td>
+                                      <apex:inputField id="pca_country" styleClass="labelLike" value="{!currentCase.Property_Address_Country__c}" style="margin-bottom: 5px;"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                  <td/>
+                                  <td style="padding: 10px;">
+                                    <apex:outputPanel id="editSaveBtn" styleClass="btn" style="padding: 3px 5px;">Edit</apex:outputPanel>
+                                  </td>
+                                </tr>
+                            </table>
+                        </apex:outputPanel>
+                    </apex:pageBlockSectionItem>
+
+                    <script type="text/javascript">
+                        (function() {
+                            // debugger;
+                            var fields = [
+                                { element: "{!$Component.address.search}", field: "PostalCode",mode: pca.fieldMode.SEARCH },
+                                { element: "{!$Component.address.pca_street}", field: "{Line1}{\n{Line2}}{\n{Line3}}{\n{Line4}}{\n{Line5}}" , mode: pca.fieldMode.POPULATE},
+                                { element: "{!$Component.address.pca_city}", field: "{City}", mode: pca.fieldMode.POPULATE },
+                                { element: "{!$Component.address.pca_state}", field: "{Province}", mode: pca.fieldMode.POPULATE },
+                                { element: "{!$Component.address.pca_postcode}", field: "{PostalCode}", mode: pca.fieldMode.POPULATE },
+                                { element: "{!$Component.address.pca_country}", field: "{CountryName}", mode: pca.fieldMode.POPULATE }
+                            ],
+                            options = {
+                                key: "ZD47-XR99-NX19-ZA13",
+                                countries: [ "UK" ],
+                                //setCountryByIP: true
+                            },
+                            control = new pca.Address(fields, options);
+                            function disable(item){
+                                if(!item){
+                                    return;
+                                }
+                                item.setAttribute('readonly','readonly');
+                                item.setAttribute('class', 'labelLike');
+                                item.onfocus = null;
+                                item.onclick = null;
+                                item.onblur = null;
+                                addressOutput.classList.remove('hideElem');
+                            }
+
+                            function enable(item) {
+                                if(!item){
+                                    return;
+                                }
+                                item.removeAttribute('readonly');
+                                item.removeAttribute('class');
+                                addressOutput.classList.add('hideElem');
+                            }
+
+                            function showLabel(item) {
+                                if (!item) {
+                                    return;
+                                }
+                                item.classList.remove('hideElem');
+                            }
+
+                            function hideLabel(item) {
+                                if (!item) {
+                                    return;
+                                }
+                                item.classList.add('hideElem');
+                            }
+
+                            var addressOutput = document.getElementById('{!$Component.address.addressOutput}');
+
+                            // document.getElementById('{!$Component.address.search}').setAttribute('readonly','readonly');
+                            
+                            var labels = [
+                                document.getElementById('{!$Component.address.pcaStreetLbl}'),
+                                document.getElementById('{!$Component.address.pcaCityLbl}'),
+                                document.getElementById('{!$Component.address.pcaStateLbl}'),
+                                document.getElementById('{!$Component.address.pcaPostcodeLbl}'),
+                                document.getElementById('{!$Component.address.pcaCountryLbl}')
+                            ];
+
+                            var elements = [
+                                document.getElementById('{!$Component.address.pca_street}'),
+                                document.getElementById('{!$Component.address.pca_city}'),
+                                document.getElementById('{!$Component.address.pca_state}'),
+                                document.getElementById('{!$Component.address.pca_postcode}'),
+                                document.getElementById('{!$Component.address.pca_country}')
+                            ];
+                            
+                            elements.forEach(disable);
+
+                            var elem = document.getElementById('{!$Component.address.editSaveBtn}');
+
+                            elem.addEventListener('click', function() {
+                                var curr = this.innerHTML;
+                                if (curr === 'Edit') {
+                                    elements.forEach(enable);
+                                    labels.forEach(showLabel);
+                                    this.innerHTML = 'Save';
+                                } else if (curr === 'Save') {
+                                    elements.forEach(disable);
+                                    labels.forEach(hideLabel);
+                                    this.innerHTML = 'Edit';
+                                }
+                            });
+
+                         })();
+                    </script>
+                </apex:pageblocksection>
+
+                <apex:pageblocksection title="Case Notes" id="caseNotes" columns="1">
+                    <apex:repeat value="{!$ObjectType.Case.FieldSets.Conveyance_Notes}" var="field">
+                        <apex:inputField value="{!currentCase[field]}" rendered="{!$ObjectType.Case.fields[field].updateable}" style="width:70%;" required="{!field.required}"/>
+                        <apex:outputField value="{!currentCase[field]}" rendered="{! !$ObjectType.Case.fields[field].updateable}" style="width:70%;"/>
+                    </apex:repeat>
+                </apex:pageblocksection>
+            </apex:actionRegion>
+
+            <script type="text/javascript">
+                var caseView = document.getElementById("{!$Component.caseView}");
+                caseView.style.cssText = 'border-top-style: solid';
+                caseView.style.cssText = 'border-top-color: rgb(111, 189, 35)';
+
+                document.getElementById("{!$Component.caseNotes}").firstChild.style.cssText = 'background-color: rgb(158, 190, 138)';
+                document.getElementById("{!$Component.propertyDetails}").firstChild.style.cssText = 'background-color: rgb(158, 190, 138)';
+            </script>
+
+        </apex:pageBlock>
+
+</apex:component>

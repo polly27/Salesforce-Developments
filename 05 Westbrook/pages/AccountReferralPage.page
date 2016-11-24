@@ -1,0 +1,375 @@
+<apex:page standardController="Account" title="Account Edit" extensions="ReferralPageExtension" showHeader="true" sidebar="true">
+    <link rel="stylesheet" href="{!URLFOR($Resource.Referral_Page, 'jquery-ui.css')}"/>
+    <apex:includeScript value="{!URLFOR($Resource.pca__PostcodeAnywhere, 'address.js')}"/>
+    <link rel="stylesheet" href="{!URLFOR($Resource.pca__PostcodeAnywhere, 'address.css')}"/>
+    <style>
+        .labelLike {
+            background:rgba(0,0,0,0);
+            border:none;
+            overflow: auto;
+            resize: none;
+            outline: none;
+        }
+        .hideElem {
+            display: none !important;
+        }
+    </style>
+    <apex:pageMessages ></apex:pageMessages>
+    <apex:form id="form">
+        <apex:pageBlock id="accountPage" title="Account Edit">
+            <apex:pageBlockButtons >
+                <apex:commandButton value="Save" action="{!saveExt}" rendered="{!$ObjectType.Account.createable && $ObjectType.Account.updateable}"/>
+                <apex:commandButton value="Cancel" action="{!cancelExt}" immediate="true"/>
+            </apex:pageBlockButtons>
+            <apex:pageBlockSection title="Account Information">
+                <apex:repeat value="{!$ObjectType.Account.FieldSets.Referral_Account_Information}" var="field">
+                    <apex:outputField value="{!Account[field]}" rendered="{! !$ObjectType.Account.fields[field].updateable}"/>
+                    <apex:inputField value="{!Account[field]}" required="{!field.required}" html-tabindex="1" rendered="{!$ObjectType.Account.fields[field].updateable}"/>
+                </apex:repeat>
+            </apex:pageBlockSection>
+
+                <apex:outputPanel id="negotiatorList">
+                      <apex:pageBlockSection id="negList" title="Estate Agent Information">
+
+                            <apex:pageBlockSectionItem >
+                                <apex:outputLabel value="{!$ObjectType.account.fields.Estate_Agent_Branch__c.label}" for="estateLabel" rendered="{!$ObjectType.Account.fields.Estate_Agent_Branch__c.updateable}"/>
+                                <apex:actionRegion >
+                                    <apex:inputField value="{!account.Estate_Agent_Branch__c}" id="estateLabel" rendered="{!$ObjectType.Account.fields.Estate_Agent_Branch__c.updateable}" html-tabindex="1" required="true">
+                                        <apex:actionSupport event="onchange" action="{!onBranchChange}" reRender="negotiatorList"/>
+                                    </apex:inputField>
+                                </apex:actionRegion>
+                            </apex:pageBlockSectionItem>
+
+                            <apex:pageBlockSectionItem >
+                                <apex:outputLabel value="{!$ObjectType.account.fields.Negotiator__c.label}" for="estateLabel" rendered="{!$ObjectType.Account.fields.Negotiator__c.updateable}"/>
+                                <apex:actionRegion >
+                                    <apex:outputPanel layout="block" styleClass="requiredInput">
+                                        <div class="requiredBlock"></div>
+                                        <apex:selectList value="{!Account.Negotiator__c}" size="1" rendered="{!$ObjectType.Account.fields.Negotiator__c.updateable}">
+                                            <apex:selectOptions value="{!negotiatorOptions}"/>
+                                        </apex:selectList>
+                                    </apex:outputPanel>
+                                </apex:actionRegion>
+                            </apex:pageBlockSectionItem>
+
+                        <apex:repeat value="{!$ObjectType.Account.FieldSets.Referral_Estate_Agent_Information}" var="field">
+                            <apex:pageBlockSectionItem >
+                                <apex:outputField value="{!Account[field]}" rendered="{! !$ObjectType.Account.fields[field].updateable}"/>
+                                <apex:inputField value="{!Account[field]}" required="{!field.required}" html-tabindex="1" rendered="{!$ObjectType.Account.fields[field].updateable}" html-input-field="{!field}"/>
+                            </apex:pageBlockSectionItem>
+                        </apex:repeat>
+                    </apex:pageBlockSection>
+
+                  <apex:pageBlockSection id="solicitorOptions" title="Solicitor Options" rendered="{! AND(Account.Id != NULL, !ISBLANK(Account.Estate_Agent_Branch__c)) }">
+                    <apex:pageBlockSectionItem >
+                        <apex:outputLabel value="{!$ObjectType.Account.Fields.Solicitor_Office__c.Label}"/>
+                        <apex:selectList value="{!Account.Solicitor_Office__c}" size="1">
+                            <apex:selectOptions value="{!solicitorOptions}" />
+                        </apex:selectList>
+                    </apex:pageBlockSectionItem>
+
+                    <apex:repeat value="{!$ObjectType.Account.FieldSets.Referral_Solicitor_Options}" var="field">
+                        <apex:pageBlockSectionItem >
+                            <apex:outputField value="{!Account[field]}" rendered="{! !$ObjectType.Account.fields[field].updateable}"/>
+                            <apex:inputField value="{!Account[field]}" required="{!field.required}" html-tabindex="1" rendered="{!$ObjectType.Account.fields[field].updateable}"/>
+                        </apex:pageBlockSectionItem>
+                    </apex:repeat>
+                  </apex:pageBlockSection>
+            </apex:outputPanel>
+
+           <apex:pageBlockSection title="Customer Details">
+                <apex:repeat value="{!allFieldsForCustomerDetail}" var="f">
+                    <apex:pageBlockSectionItem rendered="{!!f.isEmpty && !$ObjectType.Account.fields[f.name].updateable}">
+                        <apex:outputLabel value="{!$ObjectType.account.fields[f.name].label}"/>
+                        <apex:outputField value="{!Account[f.name]}"/>
+                    </apex:pageBlockSectionItem>
+
+                    <apex:pageBlockSectionItem rendered="{!!f.isEmpty && $ObjectType.Account.fields[f.name].updateable}">
+                        <apex:outputLabel value="{!$ObjectType.account.fields[f.name].label}"/>
+                        <apex:inputField value="{!Account[f.name]}" html-tabindex="{!f.index}" required="{!f.isRequired}"/>
+                    </apex:pageBlockSectionItem>
+                    <apex:pageBlockSectionItem rendered="{!f.isEmpty}"/>
+                </apex:repeat>
+
+                <apex:pageBlockSectionItem />
+                <!-- <pca:AddressFinder label="Correspondance" record="{!Account}" address="AccountShipping"/> -->
+
+                <apex:pageBlockSectionItem id="shippingAddress">
+                        <apex:outputPanel>
+                            <table width="100%">
+                              <col width="36%" align="right"/>
+                              <col width="64%"/>
+                                <tr>
+                                    <td class="labelCol vfLabelColTextWrap first">
+                                        <apex:outputLabel value="Search" for="search"/>
+                                    </td>
+                                    <td>
+                                        <apex:inputText id="search_shipping" style="padding:5px;margin-bottom: 35px;" html-placeholder="Start typing the address..."/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="labelCol vfLabelColTextWrap">
+                                      <apex:outputText id="shipAddressOutput" style="padding-top: 0;" value="Shipping Address"/>  
+                                      <apex:outputLabel id="streetLbl" value="Street" styleClass="hideElem"/>  
+                                    </td>
+                                    <td>
+                                      <apex:inputField styleClass="labelLike" id="pca_shipping_street" value="{!Account.ShippingStreet}" style="margin-top: 3px; margin-bottom: 5px;"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="labelCol vfLabelColTextWrap">
+                                      <apex:outputLabel id="cityLbl" value="City" styleClass="hideElem"/>
+                                    </td>
+                                    <td>
+                                      <apex:inputField id="pca_shipping_city" value="{!Account.ShippingCity}" style="margin-bottom: 5px;"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="labelCol vfLabelColTextWrap">
+                                      <apex:outputLabel id="stateLbl" value="State" styleClass="hideElem"/>
+                                    </td>
+                                    <td>
+                                      <apex:inputField id="pca_shipping_state" value="{!Account.ShippingState}" style="margin-bottom: 5px;"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="labelCol vfLabelColTextWrap">
+                                      <apex:outputLabel id="postalCodeLbl" value="Postal Code" styleClass="hideElem"/>
+                                    </td>
+                                    <td>
+                                      <apex:inputField id="pca_shipping_postal_code" value="{!Account.ShippingPostalCode}" style="margin-bottom: 5px;"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="labelCol vfLabelColTextWrap">
+                                      <apex:outputLabel id="countryLbl" value="Country" styleClass="hideElem"/>
+                                    </td>
+                                    <td>
+                                      <apex:inputField id="pca_shipping_country" value="{!Account.ShippingCountry}" style="margin-bottom: 5px;"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                  <td/>
+                                  <td style="padding: 10px;">
+                                    <div class="btn" id='editLink' style="padding: 3px 5px;">Edit</div>
+                                  </td>
+                                </tr>
+                            </table>
+                        </apex:outputPanel>
+                    </apex:pageBlockSectionItem>
+
+                    <script type="text/javascript">
+                        (function() {
+                            // debugger;
+                            var fields = [
+                                { element: "{!$Component.shippingAddress.search_shipping}", field: "PostalCode",mode: pca.fieldMode.SEARCH },
+                                { element: "{!$Component.shippingAddress.pca_shipping_street}", field: "{Street}" , mode: pca.fieldMode.POPULATE},
+                                { element: "{!$Component.shippingAddress.pca_shipping_city}", field: "{City}", mode: pca.fieldMode.POPULATE },
+                                { element: "{!$Component.shippingAddress.pca_shipping_state}", field: "{Province}", mode: pca.fieldMode.POPULATE },
+                                { element: "{!$Component.shippingAddress.pca_shipping_postal_code}", field: "{PostalCode}", mode: pca.fieldMode.POPULATE },
+                                { element: "{!$Component.shippingAddress.pca_shipping_country}", field: "{CountryName}", mode: pca.fieldMode.POPULATE }
+                            ],
+                            options = {
+                                key: "ZD47-XR99-NX19-ZA13",
+                                countries: [ "UK" ],
+                                //setCountryByIP: true
+                            },
+                            control = new pca.Address(fields, options);
+
+                            function disable(item){
+                                console.log('disable');
+                                if(!item) {
+                                    return;
+                                }
+                                item.setAttribute('readonly','readonly');
+                                item.setAttribute('class', 'labelLike');
+                                item.onfocus = null;
+                                item.onclick = null;
+                                item.onblur = null;
+                                shipAddressOutput.classList.remove('hideElem');
+                                console.log(item);
+                            }
+
+                            function enable(item) {
+                                if (!item) {
+                                    return;
+                                }
+                                item.removeAttribute('readonly');
+                                item.removeAttribute('class');
+                                shipAddressOutput.classList.add('hideElem');
+                            }
+
+                            function showLabel(item) {
+                                if (!item) {
+                                    return;
+                                }
+                                item.classList.remove('hideElem');
+                            }
+
+                            function hideLabel(item) {
+                                if (!item) {
+                                    return;
+                                }
+                                item.classList.add('hideElem');
+                            }
+
+                            var shipAddressOutput = document.getElementById('{!$Component.shippingAddress.shipAddressOutput}');
+
+                            var labels = [
+                                document.getElementById('{!$Component.shippingAddress.streetLbl}'),
+                                document.getElementById('{!$Component.shippingAddress.cityLbl}'),
+                                document.getElementById('{!$Component.shippingAddress.stateLbl}'),
+                                document.getElementById('{!$Component.shippingAddress.postalCodeLbl}'),
+                                document.getElementById('{!$Component.shippingAddress.countryLbl}')
+                            ];
+
+                            var elements = [
+                                document.getElementById('{!$Component.shippingAddress.pca_shipping_street}'),
+                                document.getElementById('{!$Component.shippingAddress.pca_shipping_city}'),
+                                document.getElementById('{!$Component.shippingAddress.pca_shipping_state}'),
+                                document.getElementById('{!$Component.shippingAddress.pca_shipping_postal_code}'),
+                                document.getElementById('{!$Component.shippingAddress.pca_shipping_country}')
+                            ];
+
+                            elements.forEach(disable);
+
+                            var elem = document.getElementById('editLink');
+
+                            elem.addEventListener('click', function() {
+                                var curr = this.innerHTML;
+                                if (curr === 'Edit') {
+                                    elements.forEach(enable);
+                                    labels.forEach(showLabel);
+                                    console.log(labels);                                    
+                                    this.innerHTML = 'Save';
+                                } else if (curr === 'Save') {
+                                    elements.forEach(disable);
+                                    labels.forEach(hideLabel);
+                                    this.innerHTML = 'Edit';
+                                }
+                            });
+                         })();
+                    </script>
+
+            </apex:pageBlockSection>
+
+            <apex:actionRegion >
+                <apex:pageBlockSection title="Customer Files" id="customerFiles" columns="1">
+                    <apex:pageBlockSectionItem >
+                        <apex:commandButton value="Add Case" action="{!createCase}" reRender="customerFiles" immediate="true"
+                        rendered="{!casesIndexes.size < 10 }"/>
+                    </apex:pageBlockSectionItem>
+                    <apex:repeat value="{!casesIndexes}" var="caseId">
+                        <c:CaseBox caseObject="{!cases[caseId]}" casenum="{!caseId}"/>
+                    </apex:repeat>
+                </apex:pageBlockSection>
+            </apex:actionRegion>
+            <apex:pageBlockSection title="Call Back Information">
+                <apex:pageBlockSectionItem id="callbackSection" rendered="{!Account.Id == NULL}">
+                    <apex:outputLabel id="callbackInfoLabel" value="Call Back Date"/>
+                    <apex:inputText id="callbackInfo" />
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem id="callbackTimeSection" rendered="{!Account.Id == NULL}">
+                    <apex:outputLabel id="callbackTimeLabel" value="Call Back Slot"/>
+                    <select multiselect="false" size="1" id="callbackTimeSectionSelect"/>
+                </apex:pageBlockSectionItem>
+                <apex:repeat value="{!$ObjectType.Account.FieldSets.Referral_Call_Back_Information}" var="field">
+                    <apex:inputField value="{!Account[field]}" rendered="{! AND($ObjectType.Account.fields[field].updateable, Account.Id == NULL)}" required="{!field.required}"/>
+                    <apex:outputField value="{!Account[field]}" rendered="{! AND($ObjectType.Account.fields[field].updateable, Account.Id != NULL)}"/>
+                    <apex:outputField value="{!Account[field]}" rendered="{! !$ObjectType.Account.fields[field].updateable}"/>
+                </apex:repeat>
+            </apex:pageBlockSection>
+
+            <apex:pageBlockSection title="Customer Notes" columns="1">
+                <apex:repeat value="{!$ObjectType.Account.FieldSets.Referral_Notes}" var="field">
+                    <apex:inputField value="{!Account[field]}" style="width:70%;" rendered="{!$ObjectType.Account.fields[field].updateable}" required="{!field.required}"/>
+                    <apex:outputField value="{!Account[field]}" style="width:70%;" rendered="{! !$ObjectType.Account.fields[field].updateable}"/>
+                </apex:repeat>
+            </apex:pageBlockSection>
+        </apex:pageBlock>
+
+        <apex:inputText id="callbackTimestamp" style="display: none;" value="{!callbackDate}"/>
+        <apex:inputText id="callbackSlotId" style="display: none;" value="{!slotId}"/>
+
+        <script src="{!URLFOR($Resource.Referral_Page, 'jquery.js')}"></script>
+        <script src="{!URLFOR($Resource.Referral_Page, 'jquery-ui.js')}"></script>
+        <script src="{!URLFOR($Resource.Referral_Page, 'json2.js')}"></script>
+        <script>
+
+            function goToReport(postcode, transactionType) {
+                console.log('postcode' + postcode);
+                console.log('transaction type ' + transactionType);
+
+                var url = 'https://{!host}/{!reportId}?';
+                if (transactionType != '') {
+                    url += 'pv1=' + transactionType;
+                }
+                if (postcode != '' && transactionType != '') {
+                    url += '&pv2=' + postcode;
+                } else if (postcode != '') {
+                    url += 'pv2=' + postcode;
+                }
+                window.open(url);
+            }
+
+            function getLocale(){
+                try {
+                    //return navigator.language;
+                    return 'en-UK';
+                } catch(err) {
+                    return 'en-UK';
+                }
+             // $( function() {
+            }
+            try{
+              var timeslots = JSON.parse('{!JSENCODE(slotsJson)}');
+            }catch(err){
+
+            }
+            var callbackInfo = $("input[id*=callbackInfo]");
+            callbackInfo.datepicker();
+            callbackInfo.datepicker('setDate', null);
+            callbackInfo.datepicker( "option", "firstDay", 1);
+            callbackInfo.datepicker( "option", "dateFormat", 'dd/mm/yy').on('change', function(e) {
+
+                var stringDate = callbackInfo.datepicker().val();
+
+                var value = $.datepicker.parseDate('dd/mm/yy', e.target.value );
+                $("input[id*=callbackTimestamp]").val(stringDate);
+                // debugger;
+                var options = timeslots[value.getDay()];// ["08:00-10:00", "08:00-10:00", "08:00-10:00", "08:00-10:00"];
+                var optionsHtmls = [];
+                optionsHtmls.push(['<option value="',
+                        null , '">',
+                        '--None--',
+                        '</option>'].join(''));
+                if(Array.isArray(options)){
+                    options.forEach(function(item){
+                        optionsHtmls.push(['<option value="',
+                            item.id , '">',
+                            item.fromHH, ':',
+                            item.fromMM,
+                            ' - ',
+                            item.untilHH,
+                            ':',
+                            item.untilMM ,
+                            '</option>'].join(''))
+                    });
+                }
+                // debugger;
+                $("select[id*=callbackTimeSectionSelect]").html(optionsHtmls.join(''));
+            });
+
+            var callbackTimeSectionSelect = $('select[id*=callbackTimeSectionSelect]');
+            var callbackSlotId = $("input[id*=callbackSlotId]");
+
+            callbackTimeSectionSelect.append('<option>--None--</option>');
+
+            $('select[id*=callbackTimeSectionSelect]').change(function(){
+                callbackSlotId.val( callbackTimeSectionSelect.val() );
+            });
+
+        </script>
+
+    </apex:form>
+</apex:page>
