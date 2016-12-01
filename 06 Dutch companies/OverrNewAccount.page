@@ -1,0 +1,328 @@
+<apex:page showHeader="true" sidebar="true" standardController="Account" standardStylesheets="true" docType="html-5.0">
+<html>
+<head>
+	<meta charset="utf-8" />
+	<apex:includeScript value="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js" />
+	<link href="https://code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css" rel="stylesheet"/>
+	<apex:includeScript value="https://code.jquery.com/ui/1.11.4/jquery-ui.js" />
+	<apex:includeScript value="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js"/>
+	
+</head>
+<body>
+
+	<apex:form >
+    <apex:pageMessages id="msg" escape="false"/>
+    <apex:pageBlock mode="edit">
+      <apex:pageBlockButtons >
+        <apex:commandButton value="Save" action="{!save}"/>
+        <apex:commandButton value="Cancel" action="{!cancel}"/>
+    	</apex:pageBlockButtons>
+
+    	<apex:pageBlockSection title="Account Information" collapsible="true" columns="2">
+
+				<apex:pageBlockSectionItem >
+	       	<apex:outputLabel value="Account Owner"/>
+	        <apex:outputText value="{!$User.FirstName} {!$User.LastName}"/>
+	      </apex:pageBlockSectionItem>
+
+	      <apex:pageBlockSectionItem >
+	       	<apex:outputLabel value="{!$ObjectType.Account.Fields.Rating.Label}"/>
+	        <apex:inputField value="{!Account.Rating}"/>
+				</apex:pageBlockSectionItem>
+
+				<apex:pageBlockSectionItem >
+	       	<apex:outputLabel value="{!$ObjectType.Account.Fields.Name.Label}"/>
+	       	<apex:outputPanel>
+	       		<div style="display:inline-block">
+	       			<apex:inputField value="{!Account.Name}" id="account-name" onkeyup="suggest()"/>
+	       		</div>
+	       		<div style="display:inline-block">
+	       			<img src="/img/search_dismiss.gif" title="Clear all related fields" onclick="clearData()"/>
+	       		</div>
+	       	</apex:outputPanel>
+	      </apex:pageBlockSectionItem>
+
+	      <apex:pageBlockSectionItem >
+	       	<apex:outputLabel value="{!$ObjectType.Account.Fields.Phone.Label}"/>
+	        <apex:inputField value="{!Account.Phone}"/>
+				</apex:pageBlockSectionItem>
+
+				<apex:pageBlockSectionItem >
+	       	<apex:outputLabel value="Parent Account"/>
+	        <apex:inputField value="{!Account.ParentId}"/>
+				</apex:pageBlockSectionItem>
+
+	      <apex:pageBlockSectionItem >
+	       	<apex:outputLabel value="{!$ObjectType.Account.Fields.Fax.Label}"/>
+	        <apex:inputField value="{!Account.Fax}"/>
+				</apex:pageBlockSectionItem>
+
+	      <apex:pageBlockSectionItem >
+	       	<apex:outputLabel value="{!$ObjectType.Account.Fields.AccountNumber.Label}"/>
+	        <apex:inputField value="{!Account.AccountNumber}"/>
+				</apex:pageBlockSectionItem>
+
+	      <apex:pageBlockSectionItem >
+	       	<apex:outputLabel value="{!$ObjectType.Account.Fields.Website.Label}"/>
+	        <apex:inputField value="{!Account.Website}"/>
+				</apex:pageBlockSectionItem>
+
+	      <apex:pageBlockSectionItem >
+	       	<apex:outputLabel value="{!$ObjectType.Account.Fields.Site.Label}"/>
+	        <apex:inputField value="{!Account.Site}"/>
+				</apex:pageBlockSectionItem>
+
+	      <apex:pageBlockSectionItem >
+	       	<apex:outputLabel value="{!$ObjectType.Account.Fields.TickerSymbol.Label}"/>
+	        <apex:inputField value="{!Account.TickerSymbol}"/>
+				</apex:pageBlockSectionItem>
+
+	      <apex:pageBlockSectionItem >
+	       	<apex:outputLabel value="{!$ObjectType.Account.Fields.Type.Label}"/>
+	        <apex:inputField value="{!Account.Type}"/>
+				</apex:pageBlockSectionItem>
+
+	      <apex:pageBlockSectionItem >
+	       	<apex:outputLabel value="{!$ObjectType.Account.Fields.Ownership.Label}"/>
+	        <apex:inputField value="{!Account.Ownership}"/>
+				</apex:pageBlockSectionItem>
+
+	      <apex:pageBlockSectionItem >
+	       	<apex:outputLabel value="{!$ObjectType.Account.Fields.Industry.Label}"/>
+	        <apex:inputField value="{!Account.Industry}"/>
+				</apex:pageBlockSectionItem>
+
+	      <apex:pageBlockSectionItem >
+	       	<apex:outputLabel value="{!$ObjectType.Account.Fields.NumberOfEmployees.Label}"/>
+	        <apex:inputField value="{!Account.NumberOfEmployees}"/>
+				</apex:pageBlockSectionItem>
+
+	      <apex:pageBlockSectionItem >
+	       	<apex:outputLabel value="{!$ObjectType.Account.Fields.AnnualRevenue.Label}"/>
+	        <apex:inputField value="{!Account.AnnualRevenue}"/>
+				</apex:pageBlockSectionItem>
+
+	      <apex:pageBlockSectionItem >
+	       	<apex:outputLabel value="{!$ObjectType.Account.Fields.Sic.Label}"/>
+	        <apex:inputField value="{!Account.Sic}"/>
+				</apex:pageBlockSectionItem>
+
+			</apex:pageBlockSection>
+
+			<apex:pageBlockSection collapsible="true" columns="1">
+
+	      <apex:pageBlockSectionItem >
+	       	<apex:outputLabel value="{!$ObjectType.Account.Fields.Company_Is_Active__c.Label}"/>
+	        <apex:inputField value="{!Account.Company_Is_Active__c}" id="company-is-active"/>
+				</apex:pageBlockSectionItem>
+
+	      <apex:pageBlockSectionItem >
+	       	<apex:outputLabel value="{!$ObjectType.Account.Fields.Company_Url_Id__c.Label}"/>
+	        <apex:inputField value="{!Account.Company_Url_Id__c}" id="company-url-id"/>
+				</apex:pageBlockSectionItem>
+
+	      <apex:pageBlockSectionItem >
+	       	<apex:outputLabel value="{!$ObjectType.Account.Fields.Company_Status__c.Label}"/>
+	        <apex:inputField value="{!Account.Company_Status__c}" id="company-status"/>
+				</apex:pageBlockSectionItem>
+
+	      <apex:pageBlockSectionItem >
+	       	<apex:outputLabel value="{!$ObjectType.Account.Fields.Company_Type__c.Label}"/>
+	        <apex:inputField value="{!Account.Company_Type__c}" id="company-type"/>
+				</apex:pageBlockSectionItem>
+
+ 			</apex:pageBlockSection>
+
+			<apex:pageBlockSection title="Address Information" collapsible="true" columns="2">
+
+	      <apex:pageBlockSectionItem >
+	       	<apex:outputLabel value="{!$ObjectType.Account.Fields.BillingStreet.Label}"/>
+	        <apex:inputField value="{!Account.BillingStreet}"  id="billing-street" style="width:45%;"/>
+				</apex:pageBlockSectionItem>
+
+	      <apex:pageBlockSectionItem >
+	       	<apex:outputLabel value="{!$ObjectType.Account.Fields.ShippingStreet.Label}"/>
+	        <apex:inputField value="{!Account.ShippingStreet}" style="width:45%;"/>
+				</apex:pageBlockSectionItem>
+
+	      <apex:pageBlockSectionItem >
+	       	<apex:outputLabel value="{!$ObjectType.Account.Fields.BillingCity.Label}"/>
+	        <apex:inputField value="{!Account.BillingCity}" id="billing-city"/>
+				</apex:pageBlockSectionItem>
+
+	      <apex:pageBlockSectionItem >
+	       	<apex:outputLabel value="{!$ObjectType.Account.Fields.ShippingCity.Label}"/>
+	        <apex:inputField value="{!Account.ShippingCity}"/>
+				</apex:pageBlockSectionItem>
+
+	      <apex:pageBlockSectionItem >
+	       	<apex:outputLabel value="{!$ObjectType.Account.Fields.BillingState.Label}"/>
+	        <apex:inputField value="{!Account.BillingState}"/>
+				</apex:pageBlockSectionItem>
+
+	      <apex:pageBlockSectionItem >
+	       	<apex:outputLabel value="{!$ObjectType.Account.Fields.ShippingState.Label}"/>
+	        <apex:inputField value="{!Account.ShippingState}"/>
+				</apex:pageBlockSectionItem>
+
+	      <apex:pageBlockSectionItem >
+	       	<apex:outputLabel value="{!$ObjectType.Account.Fields.BillingPostalCode.Label}"/>
+	        <apex:inputField value="{!Account.BillingPostalCode}" id="billing-postal-code"/>
+				</apex:pageBlockSectionItem>
+
+	      <apex:pageBlockSectionItem >
+	       	<apex:outputLabel value="{!$ObjectType.Account.Fields.ShippingPostalCode.Label}"/>
+	        <apex:inputField value="{!Account.ShippingPostalCode}"/>
+				</apex:pageBlockSectionItem>
+
+	      <apex:pageBlockSectionItem >
+	       	<apex:outputLabel value="{!$ObjectType.Account.Fields.BillingCountry.Label}"/>
+	        <apex:inputField value="{!Account.BillingCountry}" id="billing-country"/>
+				</apex:pageBlockSectionItem>
+
+	      <apex:pageBlockSectionItem >
+	       	<apex:outputLabel value="{!$ObjectType.Account.Fields.ShippingCountry.Label}"/>
+	        <apex:inputField value="{!Account.ShippingCountry}"/>
+				</apex:pageBlockSectionItem>
+
+			</apex:pageBlockSection>
+
+			<apex:pageBlockSection title="Additional Information" collapsible="true" columns="2">
+
+	      <apex:pageBlockSectionItem >
+	       	<apex:outputLabel value="{!$ObjectType.Account.Fields.CustomerPriority__c.Label}"/>
+	        <apex:inputField value="{!Account.CustomerPriority__c}"/>
+				</apex:pageBlockSectionItem>
+
+	      <apex:pageBlockSectionItem >
+	       	<apex:outputLabel value="{!$ObjectType.Account.Fields.SLA__c.Label}"/>
+	        <apex:inputField value="{!Account.SLA__c}"/>
+				</apex:pageBlockSectionItem>
+
+	      <apex:pageBlockSectionItem >
+	       	<apex:outputLabel value="{!$ObjectType.Account.Fields.SLAExpirationDate__c.Label}"/>
+	        <apex:inputField value="{!Account.SLAExpirationDate__c}"/>
+				</apex:pageBlockSectionItem>
+
+	      <apex:pageBlockSectionItem >
+	       	<apex:outputLabel value="{!$ObjectType.Account.Fields.SLASerialNumber__c.Label}"/>
+	        <apex:inputField value="{!Account.SLASerialNumber__c}"/>
+				</apex:pageBlockSectionItem>
+
+	      <apex:pageBlockSectionItem >
+	       	<apex:outputLabel value="{!$ObjectType.Account.Fields.NumberofLocations__c.Label}"/>
+	        <apex:inputField value="{!Account.NumberofLocations__c}"/>
+				</apex:pageBlockSectionItem>
+
+	      <apex:pageBlockSectionItem >
+	       	<apex:outputLabel value="{!$ObjectType.Account.Fields.UpsellOpportunity__c.Label}"/>
+	        <apex:inputField value="{!Account.UpsellOpportunity__c}"/>
+				</apex:pageBlockSectionItem>
+
+	      <apex:pageBlockSectionItem >
+	       	<apex:outputLabel value="{!$ObjectType.Account.Fields.Active__c.Label}"/>
+	        <apex:inputField value="{!Account.Active__c}"/>
+				</apex:pageBlockSectionItem>
+
+			</apex:pageBlockSection>
+
+			<apex:pageBlockSection title="Description Information" collapsible="true" columns="1">
+
+	      <apex:pageBlockSectionItem >
+	       	<apex:outputLabel value="Description"/>
+	        <apex:inputField value="{!Account.Description}" style="width: 40%; height: 80px;"/>
+				</apex:pageBlockSectionItem>
+
+			</apex:pageBlockSection>
+
+ 		</apex:pageBlock>
+
+	</apex:form>
+
+
+	<script type="text/javascript">
+
+		$(document).ready(function() {
+			doAutocomplete(null);
+		});
+
+		function suggest() {
+			var companyName = $("[id$=account-name]").val();
+			if(companyName != null && companyName != '') {
+				$.ajax({
+					type : "GET",
+					url : "https://overheid.io/suggest/kvk/" + companyName,
+					data: {
+						'ovio-api-key' : '0a870492652233ace97054b51ba31acfc45033eb732e69a7eca783a9b8767b16',
+						'fields[]' : 'handelsnaam'
+					},
+					success: function(response) {
+						if(response.length != 0) {
+							doAutocomplete(response);
+						}
+					},
+					error: function(xhr) {
+						$("#msg").html('Failed: ' + xhr); 
+					}
+				});
+			}
+		};
+
+		function doAutocomplete(data) {
+				$("[id$=account-name]").autocomplete({
+					source : function(request, response){
+						if(data != null) {
+							response($.map(data.handelsnaam, function (item) { return {label: item.text, id : item.extra.id}; }));
+						}
+					},
+					select : function(event, ui) {
+						$.ajax({
+							type : "GET",
+							url : "https://overheid.io/api/kvk/" + ui.item.id,
+							data: {
+								'ovio-api-key' : '0a870492652233ace97054b51ba31acfc45033eb732e69a7eca783a9b8767b16'
+							},
+							success: function(response) {
+								fillData(response);
+							},
+							error: function(xhr) {
+								$("#msg").html('Failed: ' + xhr); 
+							}
+						});
+					}
+				});
+			}	
+
+		function fillData(response) {
+			$("[id$=account-name]").val(response.handelsnaam);
+			$("[id$=company-type]").val(response.type || response.subtype || '');
+			$("[id$=billing-country]").val('Netherlands');
+			$("[id$=billing-city]").val(response.plaats || '');
+			var address = _.filter(
+				[response.straat, response.huisnummer, response.huisnummertoevoeging], 
+				function(item) { return item != null && item != ''}
+			);
+			$("[id$=billing-street]").val(address.join(', '));
+			$("[id$=billing-postal-code]").val(response.postcode || '');
+			$("[id$=company-status]").val(response.status || '');
+			$("[id$=company-is-active]").prop('checked', response.actief);
+			$("[id$=company-url-id]").val(response.dossiernummer + '/' + response.subdossiernummer);
+		}
+
+		function clearData() {
+			$("[id$=account-name]").val('');
+			$("[id$=company-type]").val('');
+			$("[id$=billing-country]").val('');
+			$("[id$=billing-city]").val('');
+			$("[id$=billing-street]").val('');
+			$("[id$=billing-postal-code]").val('');
+			$("[id$=company-status]").val('');
+			$("[id$=company-is-active]").prop('checked', true);
+			$("[id$=company-url-id]").val('');
+		}
+
+	</script>
+
+</body>         
+</html>
+</apex:page>
